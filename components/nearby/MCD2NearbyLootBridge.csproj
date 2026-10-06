@@ -1,0 +1,11 @@
+<Project Sdk="NeoRune.Sdk/0.3.1">
+  <PropertyGroup>
+    <NeoRuneInstall>false</NeoRuneInstall>
+    <NeoRuneModName>MCD2NearbyLootBridge</NeoRuneModName>
+    <Nullable>annotations</Nullable>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../bindings/nearby/nearby-bindings.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NeoRune.Sdk" Version="0.3.1" GeneratePathProperty="true" ExcludeAssets="all" />
+    <Reference Include="NeoRune.Abstractions" HintPath="$(PkgNeoRune_Sdk)/ref/NeoRune.Abstractions.dll" Private="false" />
+    <Reference Include="NeoRune.Game" HintPath="$(PkgNeoRune_Sdk)/ref/NeoRune.Game.dll" Private="false" />
+  </ItemGroup>
+</Project>
