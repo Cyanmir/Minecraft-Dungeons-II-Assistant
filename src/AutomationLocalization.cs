@@ -1262,5 +1262,6 @@ static partial class L10n
         En["请先退出游戏，再安装组件"] = "Exit the game before installing components.";
         CompleteTranslations();
         RegisterOreText();
+        RegisterUpdateText();
     }
 }

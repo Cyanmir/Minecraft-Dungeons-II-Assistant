@@ -129,7 +129,8 @@ sealed partial class ToolboxForm
         LabelAt(progress, L10n.T("拾取状态"), 20, 16, 704, 30);
         nearbyLootNote = (PixelLabel)LabelAt(progress, L10n.T("开启目标类型后按 F8 开始"), 20, 58, 704, 68);
         nearbyLootNote.PixelScale = .85f;
-        var components = StatusCard(pages[3], 128, 220);
+        // 组件安装是首次使用入口，固定在设置页顶部。
+        var components = StatusCard(pages[3], 0, 220);
         LabelAt(components, L10n.T("全部游戏组件"), 20, 16, 704, 30);
         LabelAt(components, L10n.T("收集、战斗、装备回收统一安装；自动识别游戏目录"), 20, 58, 704, 28).ForeColor = OreTheme.Muted;
         componentInstallNote = (PixelLabel)LabelAt(components, L10n.T("首次使用或更新时，请保存进度并完全退出游戏。"), 20, 98, 704, 60);

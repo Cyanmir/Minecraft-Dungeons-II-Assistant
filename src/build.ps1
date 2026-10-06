@@ -41,7 +41,7 @@ try {
         NavigationMesh.cs QuestDestination.cs AutomationUi.cs AutomationLocalization.cs CompleteLocalization.cs `
         AdaptationRecord.cs ToolboxWindow.cs ToolboxAssembly.cs OreUi.cs OreTheme.cs OreMetrics.cs OreRenderer.cs `
         OreButtons.cs OreSurfaces.cs OreScrolling.cs OreSelection.cs OreInputs.cs OreDashboard.cs OreLocalization.cs OreLayout.cs `
-        Localization.cs Diagnostics.cs LicenseViewer.cs
+        Localization.cs Diagnostics.cs LicenseViewer.cs AppUpdate.cs AppUpdateUi.cs AppUpdateLocalization.cs
     # 编译器失败时不继续打包；构建过程不修改游戏安装文件。
     if($LASTEXITCODE -ne 0){throw '编译失败'}
 } finally {Pop-Location}

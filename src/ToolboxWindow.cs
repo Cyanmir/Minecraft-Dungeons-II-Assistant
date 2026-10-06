@@ -56,6 +56,9 @@ sealed class ToolboxSettings
     public int PadStart, PadStop, PadCombo;
     // 药水备用、原生灵魂成本读取和统一后台控制；辅助快捷操作有独立输入冲突检查。
     public bool PotionFallback = true, AutoCost = true, BackgroundAuto = true;
+    // 更新默认启动检查、正式通道；自动覆盖需用户自行开启。0 正式 Release，1 Dev 预发布。
+    public bool UpdateOnStartup = true, UpdateAutomatically;
+    public int UpdateChannel;
     // 药水默认 E；手动灵魂成本默认 65；成本参考槽从 0 开始，默认第三槽。
     public int PotionKey = 0x45, SoulCost = 65, PotionSlot = 2;
     // 语言索引：0 简中、1 英语、2 日语、3 韩语、4 香港繁中、5 台湾繁中。
@@ -197,6 +200,15 @@ sealed class ToolboxSettings
                     case "backgroundAuto":
                         s.BackgroundAuto = value != 0;
                         break;
+                    case "updateOnStartup":
+                        s.UpdateOnStartup = value != 0;
+                        break;
+                    case "updateAutomatically":
+                        s.UpdateAutomatically = value != 0;
+                        break;
+                    case "updateChannel":
+                        s.UpdateChannel = Math.Max(0, Math.Min(1, value));
+                        break;
                     case "autoCost":
                         s.AutoCost = value != 0;
                         break;
@@ -311,6 +323,9 @@ sealed class ToolboxSettings
             "padStop=" + PadStop,
             "padCombo=" + PadCombo,
             "backgroundAuto=" + (BackgroundAuto ? 1 : 0),
+            "updateOnStartup=" + (UpdateOnStartup ? 1 : 0),
+            "updateAutomatically=" + (UpdateAutomatically ? 1 : 0),
+            "updateChannel=" + UpdateChannel,
             "language=" + Language,
             "potionFallback=" + (PotionFallback ? 1 : 0),
             "autoCost=" + (AutoCost ? 1 : 0),
@@ -1469,6 +1484,8 @@ sealed partial class ToolboxForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        if (interactive && settings.UpdateOnStartup)
+            CheckAppUpdates(true);
         if (interactive && MotionAllowed())
         {
             Opacity = 0;
@@ -1870,7 +1887,8 @@ sealed partial class ToolboxForm : Form
         intervalNote.ForeColor = OreTheme.Muted;
         retry = Number(timing, 523, 18, 1, 120, settings.RetrySeconds, 201);
         retry.Suffix = L10n.T("秒");
-        var background = Card(pages[3], 0, 116);
+        // 设置页先展示组件安装，后台运行接在 220 高的组件卡片之后。
+        var background = Card(pages[3], 232, 116);
         LabelAt(background, L10n.T("游戏后台运行"), 20, 17, 580, 26);
         LabelAt(background, L10n.T("统一控制已选功能，F9 停止所有操作。"), 20, 58, 704, 30).ForeColor = OreTheme.Muted;
         backgroundAuto = CheckAt(background, "", 660, 16, 64, settings.BackgroundAuto);
@@ -1976,7 +1994,7 @@ sealed partial class ToolboxForm : Form
         connectionBadge = LabelAt(footer, L10n.T("正在等待连接"), 443, 53, 350, 27);
         connectionBadge.ForeColor = OreTheme.Muted;
         ((PixelLabel)connectionBadge).Center = true;
-        var version = LabelAt(footer, "MCD2A  1.1.0", 804, 53, 171, 27);
+        var version = LabelAt(footer, "MCD2A  " + AppUpdater.CurrentVersion, 804, 53, 171, 27);
         version.ForeColor = OreTheme.Muted;
         ((PixelLabel)version).Center = true;
         ((PixelLabel)version).PixelScale = 0.8f;
@@ -2054,6 +2072,7 @@ sealed partial class ToolboxForm : Form
                 Changed();
             };
         BuildDashboard();
+        BuildUpdateSettings();
         ApplyLanguage();
         RefreshEquipmentLanguage();
         RefreshRecoveryMode();
@@ -2319,6 +2338,7 @@ sealed partial class ToolboxForm : Form
     // 把控件值采集到统一设置对象，避免页面间保留过期配置。
     void ReadSettings()
     {
+        ReadUpdateSettings();
         ReadCombatSettings();
         settings.ThreatEnabled = threatEnabled.Checked;
         settings.GamepadEnabled = true;
@@ -2434,6 +2454,7 @@ sealed partial class ToolboxForm : Form
         potionSlot.Invalidate();
         RefreshEquipmentLanguage();
         RefreshActionLabels();
+        RefreshUpdateLanguage();
         retry.Suffix = L10n.T("秒");
         retry.Invalidate();
         RefreshRecoveryMode();
@@ -3603,6 +3624,8 @@ static class ToolboxProgram
     // 程序启动和诊断参数入口；版本展示与报告同步，诊断分支不会自动进入正常窗口。
     static int Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--apply-update")
+            return AppUpdater.Apply(args[1], args[2]);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 

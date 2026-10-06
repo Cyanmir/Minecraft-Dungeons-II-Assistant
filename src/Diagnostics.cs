@@ -169,7 +169,7 @@ sealed class DiagnosticLog : IDisposable
             FlushLocked();
             var report = new StringBuilder();
             report.AppendLine("MCD2A diagnostic report / 诊断日志");
-            report.AppendLine("Version: 1.1.0");
+            report.AppendLine("Version: " + AppUpdater.CurrentVersion);
             report.AppendLine("Exported: " + DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture));
             report.AppendLine("OS: " + Environment.OSVersion.VersionString + "; 64-bit OS: " + Environment.Is64BitOperatingSystem + "; process: " + (IntPtr.Size * 8) + "-bit; CLR: " + Environment.Version);
             report.AppendLine("Toolbox state and requested actions only. No raw input, account information, game memory dump or automatic upload.");
