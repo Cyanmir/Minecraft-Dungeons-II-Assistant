@@ -5,7 +5,7 @@
 # Minecraft Dungeons II Assistant
 
 **MCD2A · Minecraft Dungeons II 游戏助手**
-
+ 
 自动恢复 · 附近交互 · 原生战斗 · 装备整理
 
 [![Version](https://img.shields.io/badge/version-1.0.0-4bb5c5)](https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant/releases/tag/1.0.0)
