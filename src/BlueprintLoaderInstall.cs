@@ -416,14 +416,14 @@ sealed class BlueprintLoaderDownloadForm : Form
         MinimizeBox = false;
         BackColor = OreTheme.Background;
         ForeColor = OreTheme.Text;
-        note = new Label
+        note = new PixelLabel
         {
             Location = new Point(20, 18),
             Size = new Size(610, 105),
             Text = L10n.T("未检测到完整蓝图加载器。\n请在官网登录并下载 Blueprint Loader（不是开发模板）。\n下载完成后自动识别、安装，再继续安装组件。")
         };
         Controls.Add(note);
-        var web = new Button
+        var web = new OreButton
         {
             Text = L10n.T("打开官方下载页"),
             Location = new Point(20, 143),
@@ -434,7 +434,7 @@ sealed class BlueprintLoaderDownloadForm : Form
             OpenSource();
         };
         Controls.Add(web);
-        var local = new Button
+        var local = new OreButton
         {
             Text = L10n.T("选择已下载 ZIP"),
             Location = new Point(232, 143),
@@ -462,7 +462,7 @@ sealed class BlueprintLoaderDownloadForm : Form
                     }
         };
         Controls.Add(local);
-        var cancel = new Button
+        var cancel = new OreButton
         {
             Text = L10n.T("取消"),
             Location = new Point(444, 143),

@@ -54,7 +54,7 @@ sealed class ToolboxSettings
     public int ComboTrigger = 0x47, JumpTrigger = 0x20, JumpKey = 0x51, JumpDelay = 30, DodgeKey = 0x52;
     public bool GamepadEnabled = true;
     public int PadStart, PadStop, PadCombo;
-    // 药水备用、原生灵魂成本读取和后台恢复控制；组合/跳劈等前台动作仍有独立限制。
+    // 药水备用、原生灵魂成本读取和统一后台控制；辅助快捷操作有独立输入冲突检查。
     public bool PotionFallback = true, AutoCost = true, BackgroundAuto = true;
     // 药水默认 E；手动灵魂成本默认 65；成本参考槽从 0 开始，默认第三槽。
     public int PotionKey = 0x45, SoulCost = 65, PotionSlot = 2;
@@ -1255,6 +1255,8 @@ sealed class RightMouseHook : IDisposable
     readonly Procedure callback;
     readonly Func<bool> active;
     readonly Action dodge;
+    readonly Func<bool> consumeInput;
+    bool passThroughPair;
     readonly RightDodgeRule rule = new RightDodgeRule();
     IntPtr handle;
     // 当前鼠标钩子是否成功安装。
@@ -1266,10 +1268,11 @@ sealed class RightMouseHook : IDisposable
         }
     }
 
-    public RightMouseHook(Func<bool> isActive, Action onDodge)
+    public RightMouseHook(Func<bool> isActive, Action onDodge, Func<bool> shouldConsume = null)
     {
         active = isActive;
         dodge = onDodge;
+        consumeInput = shouldConsume ?? (() => true);
         callback = Observe;
         handle = SetWindowsHookEx(14, callback, GetModuleHandle(null), 0);
     }
@@ -1282,10 +1285,12 @@ sealed class RightMouseHook : IDisposable
             {
                 var input = (DATA)Marshal.PtrToStructure(data, typeof(DATA));
                 bool fire;
+                if (message.ToInt64() == 0x204)
+                    passThroughPair = !consumeInput();
                 bool consume = rule.Handle(message.ToInt64() == 0x205, (input.flags & 3) != 0, active(), ToolboxInput.Held(16), ToolboxInput.OtherModifiers(), out fire);
                 if (fire)
                     dodge();
-                if (consume)
+                if (consume && !passThroughPair)
                     return (IntPtr)1;
             }
             catch
@@ -1535,8 +1540,10 @@ sealed partial class ToolboxForm : Form
         if (run)
             ToolboxLog.Start();
         Text = "Minecraft Dungeons II Assistant";
-        ClientSize = new Size(1024, 860);
-        MinimumSize = new Size(1024, 860);
+        float dpi = run ? OreDpi.Scale(IntPtr.Zero) : 1;
+        Rectangle available = Screen.FromPoint(Cursor.Position).WorkingArea;
+        ClientSize = new Size(Math.Min(available.Width - 24, (int)(OreMetrics.DesignWidth * dpi)), Math.Min(available.Height - 24, (int)(OreMetrics.DesignHeight * dpi)));
+        MinimumSize = new Size(900, 700);
         FormBorderStyle = FormBorderStyle.None;
         MaximizeBox = true;
         StartPosition = FormStartPosition.CenterScreen;
@@ -1556,8 +1563,8 @@ sealed partial class ToolboxForm : Form
         var header = new Panel
         {
             Location = Point.Empty,
-            Size = new Size(1024, 62),
-            BackColor = Color.FromArgb(32, 70, 82)
+            Size = new Size(OreMetrics.DesignWidth, OreMetrics.HeaderHeight),
+            BackColor = OreTheme.Field
         };
         Controls.Add(header);
         using (var stream = assembly.GetManifestResourceStream("toolbox.png"))
@@ -1576,12 +1583,12 @@ sealed partial class ToolboxForm : Form
                 }
         }
 
-        var title = LabelAt(header, L10n.T("MCD2A"), 73, 11, 580, 40);
-        ((PixelLabel)title).PixelScale = 2;
-        ((PixelLabel)title).Shadow = true;
+        var title = LabelAt(header, "Minecraft Dungeons II Assistant", 73, 11, 470, 40);
+        ((PixelLabel)title).PixelScale = 1.15f;
+        ((PixelLabel)title).Shadow = false;
         ((PixelLabel)title).VerticalCenter = true;
         ((PixelLabel)title).BrandHeading = true;
-        ((PixelLabel)title).EnglishScale = 0.68f;
+        ((PixelLabel)title).EnglishScale = 1;
         languageButton = new OreSelect
         {
             FixedTypography = true,
@@ -1681,38 +1688,40 @@ sealed partial class ToolboxForm : Form
                 e.SuppressKeyPress = true;
             }
         };
-        var sidebar = new OreCard
+        var sidebar = new OreSidebar
         {
-            Location = new Point(16, 79),
-            Size = new Size(224, 608),
-            BackColor = Color.FromArgb(13, 36, 45)
+            Location = new Point(0, OreMetrics.HeaderHeight),
+            Size = new Size(OreMetrics.NavWidth, 636)
         };
         Controls.Add(sidebar);
-        LabelAt(sidebar, L10n.T("功能设置"), 18, 21, 190, 28);
-        var note = LabelAt(sidebar, L10n.T("按你的游玩习惯配置"), 18, 51, 190, 32);
+        LabelAt(sidebar, L10n.T("功能设置"), 24, 20, 190, 28);
+        var note = LabelAt(sidebar, L10n.T("按你的游玩习惯配置"), 24, 52, 190, 32);
         note.ForeColor = OreTheme.Muted;
         ((PixelLabel)note).PixelScale = 1;
-        pages = new Panel[6];
-        navigation = new OreButton[6];
+        pages = new Panel[7];
+        navigation = new OreButton[7];
         string[] names =
         {
-            L10n.T("自动法器"),
-            L10n.T("法器组合"),
-            L10n.T("跳劈辅助"),
-            L10n.T("右键闪避"),
+            L10n.T("自动恢复"),
+            L10n.T("操作辅助"),
+            L10n.T("附近交互"),
+            L10n.T("设置"),
             L10n.T("自动战斗"),
-            L10n.T("装备整理")
+            L10n.T("装备整理"),
+            L10n.T("首页")
         };
         for (int i = 0; i < pages.Length; i++)
         {
             int n = i;
-            navigation[i] = new OreButton
+            navigation[i] = new OreNavItem
             {
                 Text = names[i],
                 Tag = L10n.Canonical(names[i]),
                 Navigation = true,
-                Location = new Point(12, 103 + i * 48),
-                Size = new Size(200, 44),
+                IconIndex = Array.IndexOf(new[] { 6, 0, 2, 4, 5, 3 }, i),
+                Location = new Point(8, 96 + Math.Max(0, Array.IndexOf(new[] { 6, 0, 2, 4, 5, 3 }, i)) * (OreMetrics.NavItemHeight + 4)),
+                Size = new Size(OreMetrics.NavWidth - 32, OreMetrics.NavItemHeight),
+                Visible = i != 1,
                 PixelScale = 2
             };
             sidebar.Controls.Add(navigation[i]);
@@ -1720,31 +1729,31 @@ sealed partial class ToolboxForm : Form
             {
                 AnimatePage(n);
             };
-            pages[i] = i == 0 || i >= 4 ? (Panel)new OreScrollPanel() : new Panel();
-            pages[i].Location = new Point(264, 171);
-            pages[i].Size = new Size(744, 516);
+            pages[i] = new OreScrollPanel();
+            pages[i].Location = new Point(OreMetrics.ContentX, 171);
+            pages[i].Size = new Size(OreMetrics.ContentWidth, 516);
             pages[i].BackColor = OreTheme.Background;
             Controls.Add(pages[i]);
         }
 
-        LabelAt(sidebar, L10n.T("快捷操作"), 18, 395, 187, 25).ForeColor = OreTheme.Muted;
-        var startCaption = (PixelLabel)LabelAt(sidebar, L10n.T("开始 / 暂停"), 18, 432, 124, 32);
+        LabelAt(sidebar, L10n.T("快捷操作"), 24, 421, 187, 25).ForeColor = OreTheme.Muted;
+        var startCaption = (PixelLabel)LabelAt(sidebar, L10n.T("开始 / 暂停"), 18, 452, 124, 32);
         startCaption.Wrap = false;
         startCaption.VerticalCenter = true;
         startCaption.PixelScale = 0.85f;
         startCaption.EnglishScale = 0.7f;
-        padStartButton = KeyAt(sidebar, 0x77, 146, 432, 61);
+        padStartButton = KeyAt(sidebar, 0x77, 146, 452, 61);
         padStartButton.Height = 32;
         padStartButton.PixelScale = 0.75f;
         padStartButton.AllowGamepad = true;
         padStartButton.FixedKeyboard = true;
         padStartButton.PadBinding = settings.PadStart;
-        var stopCaption = (PixelLabel)LabelAt(sidebar, L10n.T("立即停止"), 18, 468, 124, 32);
+        var stopCaption = (PixelLabel)LabelAt(sidebar, L10n.T("立即停止"), 18, 488, 124, 32);
         stopCaption.Wrap = false;
         stopCaption.VerticalCenter = true;
         stopCaption.PixelScale = 0.85f;
         stopCaption.EnglishScale = 0.7f;
-        padStopButton = KeyAt(sidebar, 0x78, 146, 468, 61);
+        padStopButton = KeyAt(sidebar, 0x78, 146, 488, 61);
         padStopButton.Height = 32;
         padStopButton.PixelScale = 0.75f;
         padStopButton.AllowGamepad = true;
@@ -1754,7 +1763,7 @@ sealed partial class ToolboxForm : Form
         {
             Text = L10n.T("导出日志"),
             Tag = "导出日志",
-            Location = new Point(18, 523),
+            Location = new Point(18, 538),
             Size = new Size(188, 42),
             PixelScale = 1
         };
@@ -1767,8 +1776,8 @@ sealed partial class ToolboxForm : Form
         {
             Text = L10n.T("许可与致谢"),
             Tag = "许可与致谢",
-            Location = new Point(18, 575),
-            Size = new Size(188, 28),
+            Location = new Point(18, 590),
+            Size = new Size(188, 34),
             PixelScale = 0.8f
         };
         sidebar.Controls.Add(licenses);
@@ -1778,7 +1787,7 @@ sealed partial class ToolboxForm : Form
         };
         pageTitle = (PixelLabel)LabelAt(this, "", 264, 85, 744, 42);
         pageTitle.PixelScale = 2;
-        pageTitle.Shadow = true;
+        pageTitle.Shadow = false;
         pageTitle.EnglishHeading = true;
         pageTitle.EnglishScale = 0.85f;
         pageDescription = (PixelLabel)LabelAt(this, "", 264, 132, 744, 30);
@@ -1859,11 +1868,11 @@ sealed partial class ToolboxForm : Form
         intervalNote.ForeColor = OreTheme.Muted;
         retry = Number(timing, 523, 18, 1, 120, settings.RetrySeconds, 201);
         retry.Suffix = L10n.T("秒");
-        var background = Card(heal, 676, 104);
-        LabelAt(background, L10n.T("后台自动使用"), 20, 17, 580, 26);
-        LabelAt(background, L10n.T("切出游戏继续检测和使用；组合宏、跳劈仅在前台触发。"), 20, 58, 704, 30).ForeColor = OreTheme.Muted;
+        var background = Card(pages[3], 0, 116);
+        LabelAt(background, L10n.T("游戏后台运行"), 20, 17, 580, 26);
+        LabelAt(background, L10n.T("统一控制已选功能，F9 停止所有操作。"), 20, 58, 704, 30).ForeColor = OreTheme.Muted;
         backgroundAuto = CheckAt(background, "", 660, 16, 64, settings.BackgroundAuto);
-        var cooling = Card(heal, 792, 222);
+        var cooling = StatusCard(heal, 676, 222);
         LabelAt(cooling, L10n.T("法器与药水冷却"), 20, 17, 690, 26);
         for (int i = 0; i < 4; i++)
         {
@@ -1885,7 +1894,7 @@ sealed partial class ToolboxForm : Form
         {
             Location = new Point(3, 86),
             Size = new Size(738, 71),
-            BackColor = Color.FromArgb(25, 46, 55)
+            BackColor = OreTheme.Card
         };
         ct.Controls.Add(macroRow);
         LabelAt(macroRow, L10n.T("触发键"), 17, 22, 360, 30);
@@ -1913,12 +1922,12 @@ sealed partial class ToolboxForm : Form
             comboSlots[i].Height = 44;
         }
 
-        var jump = pages[2];
-        var je = Card(jump, 0, 76);
+        var jump = pages[1];
+        var je = Card(jump, 400, 76);
         LabelAt(je, L10n.T("启用跳劈辅助"), 20, 15, 580, 29);
         LabelAt(je, L10n.T("检测跳跃和左键操作，再补按指定按键。"), 20, 45, 610, 24).ForeColor = OreTheme.Muted;
         jumpEnabled = CheckAt(je, "", 660, 20, 64, settings.JumpEnabled);
-        var flow = Card(jump, 88, 116);
+        var flow = Card(jump, 488, 116);
         LabelAt(flow, L10n.T("检测组合 → 自动补按"), 20, 17, 700, 27);
         jumpTrigger = KeyAt(flow, settings.JumpTrigger, 20, 57, 145);
         LabelAt(flow, "+", 179, 69, 25, 27);
@@ -1926,25 +1935,25 @@ sealed partial class ToolboxForm : Form
         jumpAttack.AllowMouse = true;
         LabelAt(flow, "→", 438, 68, 40, 29);
         jumpKey = KeyAt(flow, settings.JumpKey, 523, 57, 201);
-        var jd = Card(jump, 216, 93);
+        var jd = Card(jump, 616, 93);
         LabelAt(jd, L10n.T("补按延迟"), 20, 17, 435, 28);
         LabelAt(jd, L10n.T("检测到组合操作后，再等待此时长。"), 20, 52, 475, 28).ForeColor = OreTheme.Muted;
         jumpDelay = Number(jd, 523, 25, 0, 500, settings.JumpDelay, 201);
         jumpDelay.Suffix = "ms";
-        var dodgePage = pages[3];
-        var de = Card(dodgePage, 0, 76);
+        var dodgePage = pages[1];
+        var de = Card(dodgePage, 721, 76);
         LabelAt(de, L10n.T("启用右键闪避"), 20, 15, 580, 29);
-        LabelAt(de, L10n.T("仅在游戏前台生效；暂停后恢复普通右键。"), 20, 45, 610, 24).ForeColor = OreTheme.Muted;
+        LabelAt(de, L10n.T("右键触发闪避；Shift + 右键保留远程攻击。"), 20, 45, 610, 24).ForeColor = OreTheme.Muted;
         dodgeEnabled = CheckAt(de, "", 660, 20, 64, settings.DodgeEnabled);
-        var ranged = Card(dodgePage, 88, 93);
+        var ranged = Card(dodgePage, 809, 93);
         LabelAt(ranged, L10n.T("远程攻击"), 20, 17, 690, 28);
         LabelAt(ranged, L10n.T("先按住 Shift，再按鼠标右键；可持续蓄力。"), 20, 52, 704, 28).ForeColor = OreTheme.Muted;
         BuildAutomationPages();
         var footer = new OreCard
         {
             Location = new Point(16, 700),
-            Size = new Size(992, 140),
-            BackColor = Color.FromArgb(13, 36, 45)
+            Size = new Size(992, OreMetrics.FooterHeight),
+            BackColor = OreTheme.Card
         };
         Controls.Add(footer);
         health = LabelAt(footer, L10n.T("生命：-- / --\n灵魂：-- / --"), 16, 10, 422, 43);
@@ -1960,12 +1969,12 @@ sealed partial class ToolboxForm : Form
         ((OreButton)connect).Primary = true;
         Button stop = ButtonAt(footer, L10n.T("停止（F9）"), 804, 13, 171);
         ((OreButton)stop).Destructive = true;
-        status = LabelAt(footer, L10n.T("连接后自动开始并持续检测；进菜单前按 F9 停止。"), 16, 82, 960, 50);
+        status = LabelAt(footer, L10n.T("连接后自动开始并持续检测；进菜单前按 F9 停止。"), 16, 78, 960, 38);
         ((PixelLabel)status).PixelScale = 1;
         connectionBadge = LabelAt(footer, L10n.T("正在等待连接"), 443, 53, 350, 27);
         connectionBadge.ForeColor = OreTheme.Muted;
         ((PixelLabel)connectionBadge).Center = true;
-        var version = LabelAt(footer, "MCD2A  1.0.0", 804, 53, 171, 27);
+        var version = LabelAt(footer, "MCD2A  1.1.0", 804, 53, 171, 27);
         version.ForeColor = OreTheme.Muted;
         ((PixelLabel)version).Center = true;
         ((PixelLabel)version).PixelScale = 0.8f;
@@ -2042,6 +2051,7 @@ sealed partial class ToolboxForm : Form
             {
                 Changed();
             };
+        BuildDashboard();
         ApplyLanguage();
         RefreshEquipmentLanguage();
         RefreshRecoveryMode();
@@ -2112,50 +2122,6 @@ sealed partial class ToolboxForm : Form
         }
     }
 
-    // 重排标题、侧栏、页面和状态区，尺寸单位为像素。
-    void LayoutWindow()
-    {
-        CancelPageMotion();
-        if (!layoutReady)
-            return;
-        float sx = ClientSize.Width / 1024f, sy = ClientSize.Height / 860f, scale = Math.Min(sx, sy);
-        SuspendLayout();
-        foreach (var page in pages)
-        {
-            var scroll = page as OreScrollPanel;
-            if (scroll != null)
-            {
-                scroll.ScrollOffset = 0;
-                scroll.ContentHeight = (int)Math.Round((page == pages[5] ? 1900 : page == pages[4] ? 2428 : page == pages[0] ? 1022 : 1182) * sy);
-            }
-        }
-
-        foreach (var entry in designBounds)
-        {
-            var r = entry.Value;
-            Control parent = entry.Key.Parent;
-            float localX = parent != this && designBounds.ContainsKey(parent) ? parent.Width / (float)designBounds[parent].Width : sx;
-            int width = (int)Math.Round(r.Width * localX);
-            if (entry.Key is OreCard && parent is OreScrollPanel)
-                width -= (int)Math.Round(20 * sx);
-            entry.Key.Bounds = new Rectangle((int)Math.Round(r.X * localX), (int)Math.Round(r.Y * sy), width, (int)Math.Round(r.Height * sy));
-        }
-
-        foreach (var entry in designTextScale)
-        {
-            var label = entry.Key as PixelLabel;
-            var button = entry.Key as OreButton;
-            if (label != null)
-                label.PixelScale = entry.Value * scale;
-            else if (button != null)
-                button.PixelScale = (button.Navigation ? (1.15f) : entry.Value) * scale;
-        }
-
-        maximizeButton.Text = fullScreen || WindowState == FormWindowState.Maximized ? "❐" : "□";
-        ResumeLayout();
-        Invalidate(true);
-    }
-
     // 在普通/最大化窗口状态间切换并重排控件。
     void ToggleMaximize()
     {
@@ -2203,40 +2169,43 @@ sealed partial class ToolboxForm : Form
         pageIndex = index;
         string[] titles =
         {
-            L10n.T("设置血量时自动使用法器"),
-            L10n.T("同时释放多个法器"),
-            L10n.T("跳劈辅助"),
-            L10n.T("右键闪避"),
+            L10n.T("自动恢复"),
+            L10n.T("操作辅助"),
+            L10n.T("附近交互"),
+            L10n.T("设置"),
             L10n.T("附近敌人自动战斗"),
-            L10n.T("装备整理")
+            L10n.T("装备整理"),
+            L10n.T("首页")
         };
         string[] descriptions =
         {
             L10n.T("低于设定血量时，自动组合使用已选法器。"),
-            L10n.T("勾选槽位，使用一个触发键组合释放。"),
-            L10n.T("跳跃 + 鼠标左键 → 自动补按 Q。"),
-            L10n.T("右键闪避，Shift + 右键远程攻击。"),
+            L10n.T("法器组合、跳劈和右键闪避"),
+            L10n.T("自动拾取、开箱、食用和破罐；可调整交互间隔"),
+            L10n.T("一次安装收集、战斗和装备回收组件"),
             L10n.T("原地近战与提前使用法器；药水遵循血量阈值"),
-            L10n.T("自定义快捷键整理新拾取装备，保留受保护物品")
+            L10n.T("自定义快捷键整理新拾取装备，保留受保护物品"),
+            L10n.T("连接游戏，选择功能，再按 F8 开始")
         };
         for (int i = 0; i < pages.Length; i++)
         {
             pages[i].Visible = i == index;
-            navigation[i].Selected = i == index;
+            navigation[i].Selected = i == index || i == 3 && index == 1;
             navigation[i].Invalidate();
         }
 
         pageTitle.Text = titles[index];
         pageDescription.Text = UiCaption(descriptions[index]);
+        RefreshDashboard();
     }
 
     // 创建页面卡片容器并设定布局尺寸。
     static OreCard Card(Control parent, int y, int height)
     {
-        var p = new OreCard
+        var p = new OreSection
         {
             Location = new Point(0, y),
-            Size = new Size(744, height)
+            Size = new Size(OreMetrics.ContentWidth, height)
         };
         parent.Controls.Add(p);
         return p;
@@ -2292,14 +2261,12 @@ sealed partial class ToolboxForm : Form
     // 在指定位置创建开关，并绑定统一设置变化回调。
     static CheckBox CheckAt(Control parent, string text, int x, int y, int w, bool value)
     {
-        var c = new OreToggle
-        {
-            Text = text,
-            Tag = L10n.Canonical(text),
-            Location = new Point(x, y),
-            Size = new Size(w, 36),
-            Checked = value
-        };
+        OreToggle c = String.IsNullOrEmpty(text) ? (OreToggle)new OreSwitch() : new OreCheckbox();
+        c.Text = text;
+        c.Tag = L10n.Canonical(text);
+        c.Location = new Point(x, y);
+        c.Size = new Size(w, 36);
+        c.Checked = value;
         parent.Controls.Add(c);
         return c;
     }
@@ -2581,7 +2548,7 @@ sealed partial class ToolboxForm : Form
             return;
         bool a = ToolboxInput.RegisterHotKey(Handle, 8, 0x4000, 0x77), b = ToolboxInput.RegisterHotKey(Handle, 9, 0x4000, 0x78);
         RegisterEquipmentHotkey();
-        mouseHook = new RightMouseHook(DodgeActive, QueueDodge);
+        mouseHook = new RightMouseHook(DodgeActive, QueueDodge, GameForeground);
         ToolboxLog.Write("Input.Hooks", "F8=" + a + " F9=" + b + " rightMouse=" + mouseHook.Installed);
         if (!a || !b)
             status.Text = L10n.T("F8 / F9 被占用，请关闭旧工具后重新打开，或使用窗口按钮。");
@@ -2608,6 +2575,16 @@ sealed partial class ToolboxForm : Form
 
     protected override void WndProc(ref Message m)
     {
+        if (interactive && m.Msg == 0x02E0)
+        {
+            // 跨显示器 DPI 变化遵循 Windows 推荐矩形，布局随后按逻辑尺寸重排。
+            var next = (OreDpi.NativeRect)Marshal.PtrToStructure(m.LParam, typeof(OreDpi.NativeRect));
+            Bounds = Rectangle.FromLTRB(next.Left, next.Top, next.Right, next.Bottom);
+            LayoutWindow();
+            m.Result = IntPtr.Zero;
+            return;
+        }
+
         if (interactive && m.Msg == 0x83 && m.WParam != IntPtr.Zero)
         {
             m.Result = IntPtr.Zero;
@@ -2646,7 +2623,7 @@ sealed partial class ToolboxForm : Form
     // 检查右键闪避是否启用且满足前台/玩家等前置条件。
     bool DodgeActive()
     {
-        return !exportingLogs && !closing && !connecting && armed && settings.DodgeEnabled && reader != null && readGate.Ready && !conflict && hp > 0 && wasFront && clock.ElapsedMilliseconds - focusSince >= 600 && ToolboxInput.Front(reader.Pid);
+        return !exportingLogs && !closing && !connecting && armed && settings.DodgeEnabled && reader != null && readGate.Ready && !conflict && hp > 0 && ShortcutScope() && (!GameForeground() || clock.ElapsedMilliseconds - focusSince >= 600);
     }
 
     // 排队一次右键闪避动作，保留人工按键与队列冲突检查。
@@ -3028,7 +3005,7 @@ sealed partial class ToolboxForm : Form
     // 检查输入请求是否仍属于当前会话及启用状态。
     bool Active(InputRequest request)
     {
-        return !exportingLogs && !closing && armed && reader != null && readGate.Ready && !conflict && (ToolboxInput.Front(reader.Pid) || (request.Healing && settings.BackgroundAuto));
+        return !exportingLogs && !closing && armed && reader != null && readGate.Ready && !conflict && GameScope();
     }
 
     bool currentHealing;
@@ -3067,7 +3044,7 @@ sealed partial class ToolboxForm : Form
         }
 
         bool gameFront = reader != null && ToolboxInput.Front(reader.Pid);
-        bool scope = !exportingLogs && settings.GamepadEnabled && (gameFront || Form.ActiveForm == this);
+        bool scope = !exportingLogs && settings.GamepadEnabled && (GameScope() || Form.ActiveForm == this);
         padEdges.Update(sample, scope);
         if (padEdges.Pressed(settings.PadStop))
         {
@@ -3081,7 +3058,7 @@ sealed partial class ToolboxForm : Form
             return;
         }
 
-        bool active = scope && gameFront && wasFront && armed && readGate.Ready && !conflict && hp > 0 && now - focusSince >= 600 && now >= suppressUntil;
+        bool active = scope && GameScope() && Form.ActiveForm == null && armed && readGate.Ready && !conflict && hp > 0 && (!gameFront || now - focusSince >= 600) && now >= suppressUntil;
         if (active && settings.ComboEnabled && padEdges.Pressed(settings.PadCombo))
             Queue(settings.ComboKeys(), L10n.T("法器连发"), 0, false, now, true);
     }
@@ -3102,6 +3079,12 @@ sealed partial class ToolboxForm : Form
         {
             long now = clock.ElapsedMilliseconds;
             PollEquipment(now);
+            if (pageIndex == 4 && now - lastMeleeRangeDisplay >= 1000)
+            {
+                lastMeleeRangeDisplay = now;
+                RefreshMeleeRangeNote(reader.MeleeRangeForUi());
+            }
+
             if (now - lastBindings >= 2000)
             {
                 lastBindings = now;
@@ -3150,17 +3133,18 @@ sealed partial class ToolboxForm : Form
             if (front && !wasFront)
                 focusSince = now;
             wasFront = front;
-            bool active = !exportingLogs && armed && front && now - focusSince >= 600 && now >= suppressUntil && !ToolboxInput.Modifiers();
+            bool active = !exportingLogs && armed && readGate.Ready && hp > 0 && GameScope() && (!front || now - focusSince >= 600) && now >= suppressUntil && (!front || !ToolboxInput.Modifiers());
+            bool shortcuts = active && ShortcutScope();
             bool comboDown = ToolboxInput.Held(settings.ComboTrigger);
-            if (active && settings.ComboEnabled && comboDown && !comboWas)
+            if (shortcuts && settings.ComboEnabled && comboDown && !comboWas)
                 Queue(settings.ComboKeys(), L10n.T("法器连发"), 0, false, now);
             comboWas = comboDown;
-            bool jump = gesture.Observe(ToolboxInput.Held(settings.JumpTrigger), ToolboxInput.Held(settings.AttackTrigger), active, now);
+            bool jump = gesture.Observe(ToolboxInput.Held(settings.JumpTrigger), ToolboxInput.Held(settings.AttackTrigger), shortcuts, now);
             if (jump && settings.JumpEnabled)
                 Queue(new int[] { settings.JumpKey }, L10n.T("跳劈补按"), settings.JumpDelay, false, now);
-            bool automatic = !exportingLogs && armed && (active || (!front && settings.BackgroundAuto && now >= suppressUntil));
+            bool automatic = active;
             // 持续按住的原生法器要让位给当前确实可用的低血量恢复。
-            if (automatic && settings.HealEnabled && lowSamples >= 2 && healRule.Ready(hp, max, settings.Threshold, now, settings.RetrySeconds) && settings.CombatNative && currentAction != null && currentAction.CombatArtifacts && actionCancel != null && !actionCancel.IsCancellationRequested)
+            if (automatic && settings.HealEnabled && lowSamples >= 2 && healRule.Ready(hp, max, settings.Threshold, now, settings.RetrySeconds) && UseNativeCombat && currentAction != null && currentAction.CombatArtifacts && actionCancel != null && !actionCancel.IsCancellationRequested)
             {
                 bool potion;
                 if (RecoveryRule.Select(settings, cooldowns, souls, artifactCosts, out potion).Length > 0)
@@ -3170,7 +3154,7 @@ sealed partial class ToolboxForm : Form
                 }
             }
 
-            if (exportingLogs || !armed || !front || ToolboxInput.Modifiers() || !settings.NearbyDirect)
+            if (!active || !settings.NearbyDirect)
                 nearbyObservation.Cancel();
             if (settings.ThreatEnabled && settings.HealEnabled && active && now - lastThreatRead >= 75)
             {
@@ -3208,23 +3192,13 @@ sealed partial class ToolboxForm : Form
             if (!armed)
                 status.Text = L10n.T("已连接，按 F8 开始。");
             else
-                status.Text = front ? L10n.T("工具箱已开启，正在监测。进菜单前按 F9 停止。") : settings.BackgroundAuto ? L10n.T("后台持续检测，低血量时自动使用；F9 停止。") : L10n.T("后台持续检测，返回游戏后自动使用。");
+                status.Text = front ? L10n.T("工具箱已开启，正在监测。进菜单前按 F9 停止。") : settings.BackgroundAuto ? L10n.T("正在运行，F9 停止所有功能。") : L10n.T("等待返回游戏。");
             if (exportingLogs || !armed || (!front && !settings.BackgroundAuto))
             {
                 requests.Clear();
                 if (actionCancel != null)
                     actionCancel.Cancel();
                 Release();
-            }
-            else if (!front)
-            {
-                requests = new Queue<InputRequest>(requests.Where(r => r.Healing));
-                if (pressing && !currentHealing)
-                {
-                    if (actionCancel != null)
-                        actionCancel.Cancel();
-                    Release();
-                }
             }
 
             if (now - lastDiagnostic >= 30000)
@@ -3306,7 +3280,7 @@ sealed partial class ToolboxForm : Form
                 return;
             }
 
-            if (request.CombatArtifacts && settings.CombatNative)
+            if (request.CombatArtifacts && UseNativeCombat)
             {
                 await RunNativeArtifacts(request, cancel.Token);
                 return;
@@ -3340,7 +3314,7 @@ sealed partial class ToolboxForm : Form
 
             if (request.Threat)
             {
-                if (!settings.ThreatEnabled || !settings.HealEnabled || reader == null || !ToolboxInput.Front(reader.Pid) || clock.ElapsedMilliseconds - healRule.Last < settings.RetrySeconds * 1000L)
+                if (!settings.ThreatEnabled || !settings.HealEnabled || reader == null || !GameScope() || clock.ElapsedMilliseconds - healRule.Last < settings.RetrySeconds * 1000L)
                     return;
                 var current = reader.Threats(clock.ElapsedMilliseconds);
                 if (!current.Known || !current.Threats.Any(t => t.Id == request.ThreatId) || consumedThreats.Contains(request.ThreatId))
@@ -3383,7 +3357,7 @@ sealed partial class ToolboxForm : Form
                 healRule.Last = clock.ElapsedMilliseconds;
             if (request.Threat)
                 consumedThreats.Add(request.ThreatId);
-            await Task.Delay(background ? 800 : 60, cancel.Token);
+            await Task.Delay(background ? (request.Healing || request.Threat ? 800 : 100) : 60, cancel.Token);
         }
         catch (OperationCanceledException)
         {
@@ -3401,7 +3375,7 @@ sealed partial class ToolboxForm : Form
         finally
         {
             Release();
-            suppressUntil = clock.ElapsedMilliseconds + (settings.CombatNative && (request.CombatAttack || request.CombatArtifacts || request.CombatEvade) ? 0 : 70);
+            suppressUntil = clock.ElapsedMilliseconds + (UseNativeCombat && (request.CombatAttack || request.CombatArtifacts || request.CombatEvade) ? 0 : 70);
             pressing = false;
             currentAction = null;
             currentHealing = false;
@@ -3571,6 +3545,7 @@ static class ToolboxProgram
 {
 
     [STAThread]
+    // 程序启动和诊断参数入口；版本展示与报告同步，诊断分支不会自动进入正常窗口。
     static int Main(string[] args)
     {
         Application.EnableVisualStyles();

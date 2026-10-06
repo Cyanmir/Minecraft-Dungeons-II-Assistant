@@ -651,6 +651,409 @@ static partial class L10n
             Hk,
             Tw
         };
+        // 新页面六语言文案；规范中文键沿用设置控件的 Tag。
+        var organizedText = new[]
+        {
+            new[]
+            {
+                "恢复法器",
+                "Recovery",
+                "回復と法器",
+                "회복과 유물",
+                "恢復法器",
+                "恢復法器"
+            },
+            new[]
+            {
+                "操作辅助",
+                "Controls",
+                "操作補助",
+                "조작 보조",
+                "操作輔助",
+                "操作輔助"
+            },
+            new[]
+            {
+                "附近拾取",
+                "Nearby loot",
+                "近くの拾得",
+                "주변 수집",
+                "附近拾取",
+                "附近拾取"
+            },
+            new[]
+            {
+                "组件管理",
+                "Components",
+                "コンポーネント",
+                "구성 요소",
+                "組件管理",
+                "組件管理"
+            },
+            new[]
+            {
+                "游戏后台运行",
+                "Run in background",
+                "バックグラウンド実行",
+                "백그라운드 실행",
+                "遊戲背景執行",
+                "遊戲背景執行"
+            },
+            new[]
+            {
+                "切出游戏后所有已开启功能继续运行；F9 停止。",
+                "Enabled features continue in background. F9 stops all.",
+                "有効な機能は切替後も継続。F9で停止。",
+                "활성 기능은 백그라운드에서도 실행. F9로 중지.",
+                "切出遊戲後所有已開啟功能繼續執行；F9 停止。",
+                "切出遊戲後所有已開啟功能繼續執行；F9 停止。"
+            },
+            new[]
+            {
+                "后台也可触发闪避；其他窗口的右键正常使用。",
+                "Background dodge also works; other windows keep right-click.",
+                "背面でも回避可能。他のウィンドウの右クリックは維持。",
+                "백그라운드 회피 가능. 다른 창의 오른쪽 클릭은 유지.",
+                "背景也可觸發閃避；其他視窗的右鍵正常使用。",
+                "背景也可觸發閃避；其他視窗的右鍵正常使用。"
+            },
+            new[]
+            {
+                "恢复与法器",
+                "Recovery and artifacts",
+                "回復と法器",
+                "회복과 유물",
+                "恢復與法器",
+                "恢復與法器"
+            },
+            new[]
+            {
+                "法器组合、跳劈和右键闪避，支持后台快捷操作",
+                "Artifact combos, jump assist and dodge; background shortcuts",
+                "法器コンボ・ジャンプ攻撃・回避。背面でも使用可能",
+                "유물 조합, 점프 공격, 회피. 백그라운드 단축키 지원",
+                "法器組合、跳劈和右鍵閃避，支援背景快捷操作",
+                "法器組合、跳劈和右鍵閃避，支援背景快捷操作"
+            },
+            new[]
+            {
+                "自动拾取、开箱、食用和破罐；可调整交互间隔",
+                "Pick up, open, eat and break pots; adjustable intervals",
+                "拾得・開箱・食事・壺破壊。間隔を調整可能",
+                "수집, 상자 열기, 음식 섭취, 항아리 파괴. 간격 조절",
+                "自動拾取、開箱、食用和破罐；可調整互動間隔",
+                "自動拾取、開箱、食用和破罐；可調整互動間隔"
+            },
+            new[]
+            {
+                "统一安装全部组件，管理后台运行",
+                "Install all components and manage background operation",
+                "全コンポーネントの導入と背面実行設定",
+                "모든 구성 요소 설치 및 백그라운드 실행 설정",
+                "統一安裝全部組件，管理背景執行",
+                "統一安裝全部組件，管理背景執行"
+            },
+            new[]
+            {
+                "后台运行已开启；所有已选功能继续执行，F9 停止。",
+                "Background active; selected features continue. F9 stops all.",
+                "背面実行中。選択した機能を継続。F9で停止。",
+                "백그라운드 실행 중. 선택 기능 유지. F9로 중지.",
+                "背景執行已開啟；所有已選功能繼續執行，F9 停止。",
+                "背景執行已開啟；所有已選功能繼續執行，F9 停止。"
+            },
+            new[]
+            {
+                "主动近战，可手动移动；不会追赶远处敌人",
+                "Attack nearby enemies while walking; no chasing",
+                "移動しながら近接攻撃。遠い敵は追いません",
+                "이동 중 주변 적 공격. 멀리 있는 적은 추격하지 않음",
+                "主動近戰，可手動移動；不會追趕遠處敵人",
+                "主動近戰，可手動移動；不會追趕遠處敵人"
+            },
+            new[]
+            {
+                "站定时自动近战",
+                "Melee while standing",
+                "停止中の自動近接攻撃",
+                "정지 중 자동 근접 공격",
+                "站定時自動近戰",
+                "站定時自動近戰"
+            },
+            new[]
+            {
+                "战斗使用法器",
+                "Combat artifacts",
+                "戦闘で法器を使用",
+                "전투 중 유물 사용",
+                "戰鬥使用法器",
+                "戰鬥使用法器"
+            },
+            new[]
+            {
+                "使用恢复法器页已选槽位；药水遵循血量阈值",
+                "Use recovery slots; potions follow health threshold",
+                "回復ページの選択枠を使用。薬は体力しきい値に従う",
+                "회복 페이지 선택 슬롯 사용. 물약은 체력 기준 적용",
+                "使用恢復法器頁已選槽位；藥水遵循血量閾值",
+                "使用恢復法器頁已選槽位；藥水遵循血量閾值"
+            },
+            new[]
+            {
+                "危险接近时提前使用已选法器，支持后台运行",
+                "Use selected artifacts on incoming threats, including background",
+                "危険が近づいたら選択法器を使用。背面でも有効",
+                "위험 접근 시 선택 유물 사용. 백그라운드 지원",
+                "危險接近時提前使用已選法器，支援背景執行",
+                "危險接近時提前使用已選法器，支援背景執行"
+            },
+            new[]
+            {
+                "核对充能、危险与地面；未覆盖全部 Boss 攻击",
+                "Check charges, threats and ground; some boss attacks unsupported",
+                "チャージ・危険・地面を確認。一部ボス攻撃は未対応",
+                "충전, 위험, 지면 확인. 일부 보스 공격 미지원",
+                "核對充能、危險與地面；未覆蓋全部 Boss 攻擊",
+                "核對充能、危險與地面；未覆蓋全部 Boss 攻擊"
+            },
+            new[]
+            {
+                "等待闪避数据",
+                "Waiting for dodge data",
+                "回避データ待ち",
+                "회피 데이터 대기",
+                "等待閃避資料",
+                "等待閃避資料"
+            },
+            new[]
+            {
+                "开启功能后按 F8 开始，F9 停止",
+                "Enable features, press F8 to start; F9 to stop",
+                "機能を有効にしてF8で開始、F9で停止",
+                "기능 활성 후 F8 시작, F9 중지",
+                "開啟功能後按 F8 開始，F9 停止",
+                "開啟功能後按 F8 開始，F9 停止"
+            },
+            new[]
+            {
+                "自动拾取与交互",
+                "Auto loot and interaction",
+                "自動拾得と操作",
+                "자동 수집 및 상호작용",
+                "自動拾取與互動",
+                "自動拾取與互動"
+            },
+            new[]
+            {
+                "滑块或直接输入数字；1000 ms = 1 秒",
+                "Slider or direct input; 1000 ms = 1 second",
+                "スライダーまたは数値入力。1000 ms = 1秒",
+                "슬라이더 또는 숫자 입력. 1000 ms = 1초",
+                "滑桿或直接輸入數字；1000 ms = 1 秒",
+                "滑桿或直接輸入數字；1000 ms = 1 秒"
+            },
+            new[]
+            {
+                "保持原生范围；动作未结束时等待，不自动寻路",
+                "Native range; wait for actions to finish; no pathfinding",
+                "本来の範囲内で操作完了を待機。自動移動なし",
+                "기본 범위 적용. 동작 완료 대기. 자동 길찾기 없음",
+                "保持原生範圍；動作未結束時等待，不自動尋路",
+                "保持原生範圍；動作未結束時等待，不自動尋路"
+            },
+            new[]
+            {
+                "拾取状态",
+                "Loot status",
+                "拾得状態",
+                "수집 상태",
+                "拾取狀態",
+                "拾取狀態"
+            },
+            new[]
+            {
+                "开启目标类型后按 F8 开始；支持后台运行",
+                "Enable target types and press F8; works in background",
+                "対象を選択してF8で開始。背面実行対応",
+                "대상 유형 활성 후 F8 시작. 백그라운드 지원",
+                "開啟目標類型後按 F8 開始；支援背景執行",
+                "開啟目標類型後按 F8 開始；支援背景執行"
+            },
+            new[]
+            {
+                "全部游戏组件",
+                "All game components",
+                "全ゲームコンポーネント",
+                "모든 게임 구성 요소",
+                "全部遊戲組件",
+                "全部遊戲組件"
+            },
+            new[]
+            {
+                "收集、战斗、装备回收统一安装；自动识别游戏目录",
+                "Loot, combat and salvage together; detect game directory",
+                "拾得・戦闘・回収を一括導入。場所を自動検出",
+                "수집, 전투, 장비 회수 통합 설치. 게임 경로 자동 검색",
+                "收集、戰鬥、裝備回收統一安裝；自動識別遊戲目錄",
+                "收集、戰鬥、裝備回收統一安裝；自動識別遊戲目錄"
+            },
+            new[]
+            {
+                "首次使用或更新时，请保存进度并完全退出游戏。",
+                "Save progress and fully exit the game before installing.",
+                "導入・更新前に保存し、ゲームを完全に終了。",
+                "설치 또는 업데이트 전 저장하고 게임을 완전히 종료.",
+                "首次使用或更新時，請儲存進度並完全退出遊戲。",
+                "首次使用或更新時，請儲存進度並完全退出遊戲。"
+            },
+            new[]
+            {
+                "安装 / 更新全部组件",
+                "Install / update all components",
+                "全コンポーネントを導入・更新",
+                "모든 구성 요소 설치 / 업데이트",
+                "安裝 / 更新全部組件",
+                "安裝 / 更新全部組件"
+            },
+            new[]
+            {
+                "前台也使用原生战斗",
+                "Use native combat in foreground",
+                "前面でも本来の戦闘を使用",
+                "전면에서도 기본 전투 사용",
+                "前景也使用原生戰鬥",
+                "前景也使用原生戰鬥"
+            },
+            new[]
+            {
+                "后台战斗自动使用组件；原生模式不移动鼠标",
+                "Background combat uses components; cursor stays untouched",
+                "背面の戦闘はコンポーネントを使用。マウスは動かさない",
+                "백그라운드 전투는 구성 요소 사용. 마우스 이동 없음",
+                "背景戰鬥自動使用組件；原生模式不移動滑鼠",
+                "背景戰鬥自動使用組件；原生模式不移動滑鼠"
+            },
+            new[]
+            {
+                "组件缺失时暂停对应动作",
+                "Missing components pause actions",
+                "コンポーネント未導入時は対応する操作を停止",
+                "구성 요소 없으면 해당 동작 중지",
+                "組件缺失時暫停對應動作",
+                "組件缺失時暫停對應動作"
+            },
+            new[]
+            {
+                "安装或更新请前往「组件管理」",
+                "Install or update in Components",
+                "導入・更新はコンポーネントページへ",
+                "설치 및 업데이트는 구성 요소 페이지에서",
+                "安裝或更新請前往「組件管理」",
+                "安裝或更新請前往「組件管理」"
+            },
+            new[]
+            {
+                "已有宝箱",
+                "Existing chests",
+                "既存の宝箱",
+                "기존 상자",
+                "已有寶箱",
+                "已有寶箱"
+            },
+            new[]
+            {
+                "打开附近未开启的宝箱",
+                "Open nearby unopened chests",
+                "近くの未開封の宝箱を開く",
+                "주변 미개봉 상자 열기",
+                "打開附近未開啟的寶箱",
+                "打開附近未開啟的寶箱"
+            },
+            new[]
+            {
+                "装备 / 书 / TNT",
+                "Gear / books / TNT",
+                "装備・本・TNT",
+                "장비 / 책 / TNT",
+                "裝備 / 書 / TNT",
+                "裝備 / 書 / TNT"
+            },
+            new[]
+            {
+                "装备、附魔书及 TNT 拾取",
+                "Pick up gear, enchantment books and TNT",
+                "装備・エンチャント本・TNTを拾得",
+                "장비, 마법 부여 책, TNT 수집",
+                "裝備、附魔書及 TNT 拾取",
+                "裝備、附魔書及 TNT 拾取"
+            },
+            new[]
+            {
+                "自动食用",
+                "Eat food",
+                "自動で食べる",
+                "자동 음식 섭취",
+                "自動食用",
+                "自動食用"
+            },
+            new[]
+            {
+                "已核实食物，使用原生效果",
+                "Verified food types; native effects",
+                "確認済みの食べ物。本来の効果を使用",
+                "검증된 음식 유형. 기본 효과 적용",
+                "已核實食物，使用原生效果",
+                "已核實食物，使用原生效果"
+            },
+            new[]
+            {
+                "绿宝石罐",
+                "Emerald pots",
+                "エメラルドの壺",
+                "에메랄드 항아리",
+                "綠寶石罐",
+                "綠寶石罐"
+            },
+            new[]
+            {
+                "破坏大小罐；携带 TNT 时跳过",
+                "Break small and large pots; skip with TNT",
+                "大小の壺を破壊。TNT携帯中はスキップ",
+                "크고 작은 항아리 파괴. TNT 소지 시 건너뜀",
+                "破壞大小罐；攜帶 TNT 時跳過",
+                "破壞大小罐；攜帶 TNT 時跳過"
+            },
+            new[]
+            {
+                "请完全退出游戏，再安装或更新组件",
+                "Fully exit the game before installing or updating.",
+                "導入・更新前にゲームを完全に終了。",
+                "설치 및 업데이트 전 게임을 완전히 종료.",
+                "請完全退出遊戲，再安裝或更新組件",
+                "請完全退出遊戲，再安裝或更新組件"
+            },
+            new[]
+            {
+                "全部组件已安装，请重启游戏后连接",
+                "All components installed; restart the game and connect.",
+                "全コンポーネント導入済み。再起動して接続。",
+                "모든 구성 요소 설치 완료. 게임 재시작 후 연결.",
+                "全部組件已安裝，請重新啟動遊戲後連線",
+                "全部組件已安裝，請重新啟動遊戲後連線"
+            },
+            new[]
+            {
+                "组件已更新，请重启游戏后连接",
+                "Components updated; restart the game and connect.",
+                "更新済み。ゲームを再起動して接続。",
+                "구성 요소 업데이트 완료. 게임 재시작 후 연결.",
+                "組件已更新，請重新啟動遊戲後連線",
+                "組件已更新，請重新啟動遊戲後連線"
+            },
+        };
+        foreach (var row in organizedText)
+            for (int i = 0; i < nearbyMaps.Length; i++)
+                nearbyMaps[i][row[0]] = row[i + 1];
         foreach (var row in nearbyText)
             for (int i = 0; i < nearbyMaps.Length; i++)
                 nearbyMaps[i][row[0]] = row[i + 1];
@@ -857,5 +1260,7 @@ static partial class L10n
         En["检测到多个不完整的蓝图加载器，请先检查模组目录"] = "Multiple incomplete loaders found; check the mod folders first.";
         En["模组目录过多，请检查蓝图加载器安装目录"] = "Too many mod folders; check the loader directory.";
         En["请先退出游戏，再安装组件"] = "Exit the game before installing components.";
+        CompleteTranslations();
+        RegisterOreText();
     }
 }

@@ -148,11 +148,11 @@ sealed partial class ToolboxForm
         {
             if (nearbyDirectBridge == null)
                 nearbyDirectBridge = new NearbyLootBridge(reader.Pid);
-            if (!Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires || !ToolboxInput.Front(reader.Pid) || !NearbyInputReady(clock.ElapsedMilliseconds))
+            if (!Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires || !NearbyInputReady(clock.ElapsedMilliseconds))
                 return;
+            // 后台用户可操作其他窗口；鼠标读数只用于诊断，不作为后台阻塞条件。
             System.Drawing.Point cursorBefore;
-            if (!ToolboxInput.CombatCursor(out cursorBefore))
-                return;
+            bool cursorKnown = ToolboxInput.CombatCursor(out cursorBefore), verifyCursor = GameForeground();
             var bridge = nearbyDirectBridge;
             bridge.Dispatch(target, state.PawnName, false, allowMoving, settings.NearbyIntervalMs, settings.NearbyFoodIntervalMs);
             sent = true;
@@ -179,7 +179,8 @@ sealed partial class ToolboxForm
                     nearbyLootRule.Attempt(target);
                     System.Drawing.Point cursorAfter;
                     var after = reader.ReadNearbyLoot();
-                    if (!ToolboxInput.CombatCursor(out cursorAfter) || !after.Known || after.Combat.Session != state.Combat.Session || (!allowMoving && (cursorAfter != cursorBefore || (after.Combat.Player - state.Combat.Player).Length > .001)))
+                    bool cursorAfterKnown = ToolboxInput.CombatCursor(out cursorAfter);
+                    if (!after.Known || after.Combat.Session != state.Combat.Session || (!allowMoving && ((verifyCursor && GameForeground() && cursorKnown && cursorAfterKnown && cursorAfter != cursorBefore) || (after.Combat.Player - state.Combat.Player).Length > .001)))
                     {
                         Arm(false);
                         nearbyLootNote.Text = L10n.T("鼠标或角色位置发生变化，已停止附近交互");
@@ -188,7 +189,7 @@ sealed partial class ToolboxForm
                     }
 
                     nearbyLootNote.Text = L10n.T(receipt.Status == "BookPickedUp" ? "游戏已确认附魔书拾取" : receipt.Status == "PickedUp" ? "游戏已确认装备拾取" : receipt.Status == "Opened" ? "游戏已确认宝箱开启" : receipt.Status == "Consumed" ? "游戏已确认食物消耗与原生效果" : receipt.Status == "Carried" ? "游戏已确认 TNT 拾取与携带" : "游戏已确认绿宝石罐破坏与掉落");
-                    ToolboxLog.Write("Loot.DirectResult", "target=" + target.Id + " state=" + receipt.Status + "; allowManualMovement=" + allowMoving + " cursorUnchanged=" + (cursorAfter == cursorBefore) + " playerUnchanged=" + ((after.Combat.Player - state.Combat.Player).Length <= .001));
+                    ToolboxLog.Write("Loot.DirectResult", "target=" + target.Id + " state=" + receipt.Status + "; allowManualMovement=" + allowMoving + " cursorUnchanged=" + (cursorKnown && cursorAfterKnown ? (cursorAfter == cursorBefore).ToString() : "unknown") + " playerUnchanged=" + ((after.Combat.Player - state.Combat.Player).Length <= .001));
                     return;
                 }
 

@@ -469,11 +469,11 @@ sealed partial class ToolboxForm
     // 依据当前威胁和地面证据决定是否提交一次闪避请求。
     void PollEvade(bool active, long now)
     {
-        if (!settings.CombatEvade || !active || (!settings.CombatNative && XboxPad.ActiveMode) || pressing || now - lastEvadeRead < 75)
+        if (!settings.CombatEvade || !active || (!UseNativeCombat && XboxPad.ActiveMode) || pressing || now - lastEvadeRead < 75)
             return;
         lastEvadeRead = now;
         var state = reader.ReadCombatState();
-        if (!(settings.CombatNative ? state.CanAttempt : state.CanAim) || state.Roll == null || !state.Roll.Known || !state.Roll.TagsAllow || !state.Readiness.HasRollCharge || (!settings.CombatNative && EvadeKeyConflict(state.DodgeKey)))
+        if (!(UseNativeCombat ? state.CanAttempt : state.CanAim) || state.Roll == null || !state.Roll.Known || !state.Roll.TagsAllow || !state.Readiness.HasRollCharge || (!UseNativeCombat && EvadeKeyConflict(state.DodgeKey)))
         {
             evadeRuntimeNote.Text = L10n.T("闪避等待充能、游戏键位和地面状态");
             return;
@@ -487,7 +487,7 @@ sealed partial class ToolboxForm
         }
 
         Func<ThreatVector, bool> aimAllowed = null;
-        if (!settings.CombatNative)
+        if (!UseNativeCombat)
         {
             Rectangle viewport;
             if (!ToolboxInput.ClientArea(reader.Window, reader.Pid, out viewport))
@@ -502,9 +502,9 @@ sealed partial class ToolboxForm
         var frame = reader.Threats(now);
         var live = new HashSet<string>(frame.Threats.Select(t => t.Id));
         evadedThreats.RemoveWhere(id => !live.Contains(id));
-        var plan = EvadeGroundRule.Plan(state, frame, evadeGround, evadedThreats, aimAllowed, settings.CombatNative);
+        var plan = EvadeGroundRule.Plan(state, frame, evadeGround, evadedThreats, aimAllowed, UseNativeCombat);
         evadeRuntimeNote.Text = String.Format(L10n.T("闪避充能 {0} · 可核对危险 {1}"), state.Readiness.RollCharges, frame.Threats.Count(t => t.RadiusKnown));
-        if (plan == null || now - lastEvade < 800 || requests.Any(r => r.CombatEvade) || ToolboxInput.Modifiers() || new[]
+        if (plan == null || now - lastEvade < 800 || requests.Any(r => r.CombatEvade) || (GameForeground() && ToolboxInput.Modifiers()) || new[]
         {
             1,
             2,
@@ -515,7 +515,7 @@ sealed partial class ToolboxForm
             68,
             83,
             87
-        }.Any(ToolboxInput.Held))
+        }.Any(GameInputHeld))
             return;
         // 排队攻击不能延迟危险响应；已有恢复请求继续保留。
         var response = new InputRequest
@@ -534,7 +534,7 @@ sealed partial class ToolboxForm
     // 执行已经校验的旧输入闪避请求并负责按键释放。
     async Task RunCombatEvade(InputRequest request, CancellationToken cancel)
     {
-        if (settings.CombatNative)
+        if (UseNativeCombat)
         {
             await RunNativeEvade(request, cancel);
             return;
@@ -544,7 +544,7 @@ sealed partial class ToolboxForm
         if (!settings.CombatEvade || XboxPad.ActiveMode || !ValidateCombatRequest(request, out state) || !state.CanAim || EvadeKeyConflict(state.DodgeKey) || evadeGround == null || clock.ElapsedMilliseconds - lastEvadeGround > 8000)
             return;
         Func<ThreatVector, bool> aimAllowed = null;
-        if (!settings.CombatNative)
+        if (!UseNativeCombat)
         {
             Rectangle viewport;
             if (!ToolboxInput.ClientArea(reader.Window, reader.Pid, out viewport))
@@ -557,7 +557,7 @@ sealed partial class ToolboxForm
         }
 
         var frame = reader.Threats(clock.ElapsedMilliseconds);
-        var plan = EvadeGroundRule.Plan(state, frame, evadeGround, evadedThreats, aimAllowed, settings.CombatNative);
+        var plan = EvadeGroundRule.Plan(state, frame, evadeGround, evadedThreats, aimAllowed, UseNativeCombat);
         if (plan == null || plan.ThreatId != request.ThreatId || cancel.IsCancellationRequested || !Active(request) || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires || ToolboxInput.Busy(new[] { state.DodgeKey }) || new[]
         {
             1,
@@ -569,7 +569,7 @@ sealed partial class ToolboxForm
             68,
             83,
             87
-        }.Any(ToolboxInput.Held))
+        }.Any(GameInputHeld))
             return;
         Rectangle area;
         Point aim, previous;

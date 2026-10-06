@@ -205,12 +205,12 @@ sealed partial class ToolboxForm
         bool sent = false;
         try
         {
-            if (!settings.CombatNative || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires || !ToolboxInput.Front(reader.Pid))
+            if (!UseNativeCombat || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires)
                 return;
             if (combatNativeBridge == null)
                 combatNativeBridge = new CombatBridge(reader.Pid);
             var bridge = combatNativeBridge;
-            if (!settings.CombatNative || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires || !ToolboxInput.Front(reader.Pid))
+            if (!UseNativeCombat || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires)
                 return;
             bridge.Dispatch(kind, state, target, slot, direction, range);
             sent = true;
@@ -231,7 +231,7 @@ sealed partial class ToolboxForm
             while (clock.ElapsedMilliseconds < deadline)
             {
                 await Task.Delay(40, cancel);
-                if (!Active(request) || request.Generation != generation || !settings.CombatNative || !ToolboxInput.Front(reader.Pid))
+                if (!Active(request) || request.Generation != generation || !UseNativeCombat)
                 {
                     bridge.Stop();
                     return;
@@ -286,7 +286,7 @@ sealed partial class ToolboxForm
     async Task RunNativeMelee(InputRequest request, CancellationToken cancel)
     {
         CombatState state;
-        if (!(settings.CombatAttack || settings.CombatEncounter) || !ValidateCombatRequest(request, out state) || !CombatScheduling.NativeInputReady(state, settings, ToolboxInput.Held, settings.CombatEncounter))
+        if (!(settings.CombatAttack || settings.CombatEncounter) || !ValidateCombatRequest(request, out state) || !CombatScheduling.NativeInputReady(state, settings, GameInputHeld, settings.CombatEncounter))
             return;
         var target = NativeCombatRule.AttackTarget(state, settings.CombatRange, settings.CombatEncounter);
         if (target == null || target.Id != request.TargetId)
@@ -356,7 +356,7 @@ sealed partial class ToolboxForm
             68,
             83,
             87
-        }.Any(ToolboxInput.Held))
+        }.Any(GameInputHeld))
             return;
         await NativeCombatAction(request, state, "roll", null, 0, plan.Direction, state.Roll.GroundEnvelope, cancel);
     }

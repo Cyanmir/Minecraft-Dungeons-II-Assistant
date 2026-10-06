@@ -76,6 +76,8 @@ sealed class CombatCamera
 // CombatState 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatState
 {
+    // 只读原生属性；未知时显示等待，不把工具筛选上限当成武器攻击距离。
+    public double? MeleeRange;
     public bool Known;
     public string Reason, Session, CameraReason, PawnName;
     public ThreatVector Player, PlayerVelocity;
@@ -205,6 +207,7 @@ sealed partial class HealthReader
             OwnedTagsLayout(player);
             state.Player = Position(player);
             state.Readiness = ReadCombatReadiness(player);
+            state.MeleeRange = ReadMeleeRange(player);
             state.Roll = ReadRollEligibility(player, state.Readiness);
             state.Session = InventorySession();
             Identity capsule = Token(M.Q(player.Address + Offset(player, "CapsuleComponent", 8)));

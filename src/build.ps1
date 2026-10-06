@@ -28,7 +28,7 @@ try {
         /resource:assets/Mojang-fonts-license.txt,Mojang-fonts-license.txt /resource:assets/Mojang-fonts-OFL.txt,Mojang-fonts-OFL.txt /resource:assets/OFL-1.1.txt,OFL-1.1.txt /resource:assets/SourceHanSans-LICENSE.txt,SourceHanSans-LICENSE.txt `
         /resource:assets/combat-component/MCD2CombatBridge_P.pak,MCD2CombatBridge_P.pak /resource:assets/combat-component/MCD2CombatBridge_P.utoc,MCD2CombatBridge_P.utoc /resource:assets/combat-component/MCD2CombatBridge_P.ucas,MCD2CombatBridge_P.ucas /resource:assets/native-combat-artifacts.json,native-combat-artifacts.json `
         /out:$Output /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Core.dll `
-        /r:System.Web.Extensions.dll /r:System.IO.Compression.dll AutoHeal.cs BlueprintLoaderInstall.cs `
+        /r:System.Web.Extensions.dll /r:System.IO.Compression.dll AutoHeal.cs BackgroundPolicy.cs ComponentBundleInstall.cs BlueprintLoaderInstall.cs `
         GameLocator.cs GameInstallLocator.cs EnemyThreats.cs `
         CombatDefinitions.cs CombatTelemetry.cs BoneGeometry.cs LiveCombatMotion.cs `
         CombatEligibility.cs CombatRuntime.cs CombatActions.cs CombatScheduling.cs `
@@ -38,8 +38,9 @@ try {
         GdkBridgeTransport.cs NativeBridgeChannel.cs InventoryReader.cs `
         EquipmentPolicy.cs EquipmentDropOrigins.cs EquipmentBridge.cs EquipmentBridgeInstall.cs `
         EquipmentActions.cs EquipmentVisualization.cs EquipmentGamePresentation.cs `
-        NavigationMesh.cs QuestDestination.cs AutomationUi.cs AutomationLocalization.cs `
-        AdaptationRecord.cs ToolboxWindow.cs ToolboxAssembly.cs OreUi.cs `
+        NavigationMesh.cs QuestDestination.cs AutomationUi.cs AutomationLocalization.cs CompleteLocalization.cs `
+        AdaptationRecord.cs ToolboxWindow.cs ToolboxAssembly.cs OreUi.cs OreTheme.cs OreMetrics.cs OreRenderer.cs `
+        OreButtons.cs OreSurfaces.cs OreScrolling.cs OreSelection.cs OreInputs.cs OreDashboard.cs OreLocalization.cs OreLayout.cs `
         Localization.cs Diagnostics.cs LicenseViewer.cs
     # 编译器失败时不继续打包；构建过程不修改游戏安装文件。
     if($LASTEXITCODE -ne 0){throw '编译失败'}

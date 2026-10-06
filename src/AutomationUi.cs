@@ -45,117 +45,106 @@ sealed partial class ToolboxForm
     void BuildAutomationPages()
     {
         equipmentPolicy = interactive ? EquipmentPolicy.Load() : new EquipmentPolicy();
-        var encounter = Card(pages[4], 0, 120);
+        // 页面按用途拆分；常用目标开关以两列展示，安装入口仅保留在设置。
+        var encounter = Card(pages[4], 0, 100);
         LabelAt(encounter, L10n.T("遇到敌人自动攻击"), 20, 16, 600, 30);
         combatEncounterEnabled = CheckAt(encounter, "", 660, 14, 64, settings.CombatEncounter);
-        LabelAt(encounter, L10n.T("需原生模式；遇敌主动近战，允许手动行走，不寻路"), 20, 58, 704, 28).ForeColor = OreTheme.Muted;
-        LabelAt(encounter, L10n.T("法器仍由下方开关与勾选槽位控制，无需等敌人先出手"), 20, 87, 704, 28).ForeColor = OreTheme.Muted;
-        var attack = Card(pages[4], 132, 158);
-        LabelAt(attack, L10n.T("附近敌人原地近战"), 20, 16, 600, 30);
+        LabelAt(encounter, L10n.T("主动近战，可手动移动；不会追赶远处敌人"), 20, 58, 704, 30).ForeColor = OreTheme.Muted;
+        var attack = Card(pages[4], 112, 196);
+        LabelAt(attack, L10n.T("站定时自动近战"), 20, 16, 600, 30);
         combatAttackEnabled = CheckAt(attack, "", 660, 14, 64, settings.CombatAttack);
-        LabelAt(attack, L10n.T("组件原生近战或按键模式，不追赶远处敌人"), 20, 58, 704, 36).ForeColor = OreTheme.Muted;
-        LabelAt(attack, L10n.T("附近判定范围"), 20, 112, 460, 28);
-        combatRange = Number(attack, 523, 104, 80, 500, settings.CombatRange, 201);
-        var proactive = Card(pages[4], 302, 128);
-        LabelAt(proactive, L10n.T("战斗提前使用法器"), 20, 16, 600, 30);
+        LabelAt(attack, L10n.T("目标判定范围（80–500 游戏单位）"), 20, 58, 704, 30);
+        combatRange = Number(attack, 523, 96, 80, 500, settings.CombatRange, 201);
+        combatRangeSlider = new OreSlider
+        {
+            Location = new Point(20, 99),
+            Size = new Size(482, 39),
+            Minimum = 80,
+            Maximum = 500,
+            Value = settings.CombatRange
+        };
+        attack.Controls.Add(combatRangeSlider);
+        combatRangeNote = (PixelLabel)LabelAt(attack, L10n.T("游戏近战范围待连接读取；工具判定上限 500\n数值为游戏单位，不扩大原生攻击范围"), 20, 146, 704, 42);
+        combatRangeNote.PixelScale = .75f;
+        combatRangeNote.ForeColor = OreTheme.Muted;
+        var proactive = Card(pages[4], 320, 100);
+        LabelAt(proactive, L10n.T("战斗使用法器"), 20, 16, 600, 30);
         combatArtifactsEnabled = CheckAt(proactive, "", 660, 14, 64, settings.CombatArtifacts);
-        LabelAt(proactive, L10n.T("遇敌攻击开启后主动使用，否则等待敌人攻击你"), 20, 58, 704, 31).ForeColor = OreTheme.Muted;
-        LabelAt(proactive, L10n.T("药水仍只在低血量时使用"), 20, 91, 704, 27).ForeColor = OreTheme.Muted;
-        var threatCard = Card(pages[4], 442, 148);
+        LabelAt(proactive, L10n.T("使用自动恢复页已选槽位；药水遵循血量阈值"), 20, 58, 704, 30).ForeColor = OreTheme.Muted;
+        var threatCard = Card(pages[4], 432, 132);
         LabelAt(threatCard, L10n.T("攻击预警（实验）"), 20, 15, 580, 28);
         threatEnabled = CheckAt(threatCard, "", 660, 14, 64, settings.ThreatEnabled);
-        var threatHelp = (PixelLabel)LabelAt(threatCard, L10n.T("攻击动作或直线弹道接近时，提前使用已选法器"), 20, 51, 704, 28);
-        threatHelp.PixelScale = .85f;
-        threatHelp.ForeColor = OreTheme.Muted;
-        var threatPotion = (PixelLabel)LabelAt(threatCard, L10n.T("药水仍受血量阈值限制；仅在游戏前台生效"), 20, 83, 704, 27);
-        threatPotion.PixelScale = .85f;
-        threatPotion.ForeColor = OreTheme.Muted;
-        threatNote = (PixelLabel)LabelAt(threatCard, L10n.T("等待攻击预警数据"), 20, 116, 704, 24);
+        LabelAt(threatCard, L10n.T("危险接近时提前使用已选法器"), 20, 53, 704, 28).ForeColor = OreTheme.Muted;
+        threatNote = (PixelLabel)LabelAt(threatCard, L10n.T("等待攻击预警数据"), 20, 92, 704, 27);
         threatNote.PixelScale = .8f;
         threatNote.ForeColor = OreTheme.Muted;
-        var evade = Card(pages[4], 602, 158);
+        var evade = Card(pages[4], 576, 132);
         LabelAt(evade, L10n.T("攻击自动闪避（实验）"), 20, 16, 600, 30);
         combatEvadeEnabled = CheckAt(evade, "", 660, 14, 64, settings.CombatEvade);
-        LabelAt(evade, L10n.T("核对原生充能、危险和方向上的地面"), 20, 58, 704, 34).ForeColor = OreTheme.Muted;
-        evadeRuntimeNote = (PixelLabel)LabelAt(evade, L10n.T("核对弹道与近战骨骼轨迹；未覆盖全部 Boss 攻击"), 20, 105, 704, 34);
+        LabelAt(evade, L10n.T("核对充能、危险与地面；未覆盖全部 Boss 攻击"), 20, 55, 704, 30).ForeColor = OreTheme.Muted;
+        evadeRuntimeNote = (PixelLabel)LabelAt(evade, L10n.T("等待闪避数据"), 20, 96, 704, 26);
         evadeRuntimeNote.ForeColor = OreTheme.Muted;
         evadeRuntimeNote.PixelScale = .85f;
-        var runtime = Card(pages[4], 772, 148);
+        var runtime = StatusCard(pages[4], 720, 116);
         LabelAt(runtime, L10n.T("战斗状态"), 20, 16, 704, 30);
-        combatRuntimeNote = (PixelLabel)LabelAt(runtime, L10n.T("勾选功能后按 F8 开始，F9 随时停止"), 20, 55, 704, 38);
+        combatRuntimeNote = (PixelLabel)LabelAt(runtime, L10n.T("开启功能后按 F8 开始，F9 停止"), 20, 56, 704, 44);
         combatRuntimeNote.PixelScale = .85f;
-        LabelAt(runtime, L10n.T("仅游戏前台执行；打开菜单或手动操作时暂停近战"), 20, 103, 704, 31).ForeColor = OreTheme.Muted;
-        var native = Card(pages[4], 932, 208);
-        LabelAt(native, L10n.T("原生战斗组件（实验）"), 20, 16, 600, 30);
-        combatNativeEnabled = CheckAt(native, "", 660, 14, 64, settings.CombatNative);
-        LabelAt(native, L10n.T("近战、各类法器与安全方向翻滚；鼠标不动"), 20, 58, 704, 32).ForeColor = OreTheme.Muted;
-        LabelAt(native, L10n.T("法器支持蓄力、限时引导和目标瞄准"), 20, 95, 704, 32).ForeColor = OreTheme.Muted;
-        nativeCombatNote = (PixelLabel)LabelAt(native, L10n.T("勾选原生模式后，组件缺失时暂停战斗动作"), 20, 130, 704, 30);
-        nativeCombatNote.PixelScale = .8f;
-        var installCombat = ButtonAt(native, L10n.T("安装 / 更新原生战斗组件"), 20, 166, 704);
-        installCombat.Click += delegate
-        {
-            InstallCombatComponent();
-        };
-        var chest = Card(pages[4], 1152, 120);
-        LabelAt(chest, L10n.T("附近宝箱交互（实验）"), 20, 16, 600, 30);
-        nearbyChestsEnabled = CheckAt(chest, "", 660, 14, 64, settings.NearbyChests);
-        LabelAt(chest, L10n.T("已有宝箱使用原生交互；每个目标只请求一次"), 20, 58, 704, 46).ForeColor = OreTheme.Muted;
-        var loot = Card(pages[4], 1284, 120);
-        LabelAt(loot, L10n.T("附近装备 / 附魔书 / TNT 拾取（实验）"), 20, 16, 600, 30);
-        nearbyItemsEnabled = CheckAt(loot, "", 660, 14, 64, settings.NearbyItems);
-        LabelAt(loot, L10n.T("拾取附近装备和附魔书；TNT 仅拾取携带"), 20, 58, 704, 46).ForeColor = OreTheme.Muted;
-        var pot = Card(pages[4], 1416, 120);
-        LabelAt(pot, L10n.T("附近绿宝石罐（实验）"), 20, 16, 600, 30);
-        nearbyPotsEnabled = CheckAt(pot, "", 660, 14, 64, settings.NearbyPots);
-        LabelAt(pot, L10n.T("原生近战破坏大小罐；携带 TNT 时跳过；鼠标不动"), 20, 58, 704, 46).ForeColor = OreTheme.Muted;
-        var food = Card(pages[4], 1548, 120);
-        LabelAt(food, L10n.T("附近食物自动食用（实验）"), 20, 16, 600, 30);
-        nearbyFoodEnabled = CheckAt(food, "", 660, 14, 64, settings.NearbyFood);
-        LabelAt(food, L10n.T("只处理已核实食物，核对消耗与原生效果；鼠标不动"), 20, 58, 704, 46).ForeColor = OreTheme.Muted;
-        var direct = Card(pages[4], 1680, 520);
-        LabelAt(direct, L10n.T("附近原生交互（实验）"), 20, 16, 600, 30);
-        nearbyDirectEnabled = CheckAt(direct, "", 660, 14, 64, settings.NearbyDirect);
-        LabelAt(direct, L10n.T("需要蓝图加载器及直接收集组件；不移动鼠标，不需选中"), 20, 58, 704, 44).ForeColor = OreTheme.Muted;
-        LabelAt(direct, L10n.T("移动交互和间隔可自定义；需更新直接收集组件"), 20, 104, 704, 31).ForeColor = OreTheme.Muted;
-        LabelAt(direct, L10n.T("允许手动移动时交互"), 20, 150, 600, 30);
-        nearbyMovingEnabled = CheckAt(direct, "", 660, 148, 64, settings.NearbyAllowMoving);
-        LabelAt(direct, L10n.T("通用交互间隔"), 20, 202, 704, 30);
-        nearbyInterval = Number(direct, 523, 239, 100, 30000, settings.NearbyIntervalMs, 201);
+        var master = Card(pages[2], 0, 76);
+        LabelAt(master, L10n.T("自动拾取与交互"), 20, 18, 600, 30);
+        nearbyDirectEnabled = CheckAt(master, "", 660, 18, 64, settings.NearbyDirect);
+        nearbyChestsEnabled = LootTypeCard(0, 88, "已有宝箱", "打开附近未开启的宝箱", settings.NearbyChests);
+        nearbyItemsEnabled = LootTypeCard(378, 88, "装备 / 书 / TNT", "装备、附魔书及 TNT 拾取", settings.NearbyItems);
+        nearbyFoodEnabled = LootTypeCard(0, 216, "自动食用", "已核实食物，使用原生效果", settings.NearbyFood);
+        nearbyPotsEnabled = LootTypeCard(378, 216, "绿宝石罐", "破坏大小罐；携带 TNT 时跳过", settings.NearbyPots);
+        var direct = Card(pages[2], 344, 336);
+        LabelAt(direct, L10n.T("允许手动移动时交互"), 20, 16, 600, 30);
+        nearbyMovingEnabled = CheckAt(direct, "", 660, 14, 64, settings.NearbyAllowMoving);
+        LabelAt(direct, L10n.T("通用交互间隔"), 20, 65, 704, 30);
+        nearbyInterval = Number(direct, 523, 103, 100, 30000, settings.NearbyIntervalMs, 201);
         nearbyInterval.Suffix = "ms";
         nearbyIntervalSlider = new OreSlider
         {
-            Location = new Point(20, 242),
+            Location = new Point(20, 106),
             Size = new Size(482, 39),
             Minimum = 0,
             Maximum = 1000,
             Value = NearbyIntervalScale.Position(settings.NearbyIntervalMs)
         };
         direct.Controls.Add(nearbyIntervalSlider);
-        LabelAt(direct, L10n.T("食物食用间隔"), 20, 298, 704, 30);
-        nearbyFoodInterval = Number(direct, 523, 335, 100, 30000, settings.NearbyFoodIntervalMs, 201);
+        LabelAt(direct, L10n.T("食物食用间隔"), 20, 160, 704, 30);
+        nearbyFoodInterval = Number(direct, 523, 198, 100, 30000, settings.NearbyFoodIntervalMs, 201);
         nearbyFoodInterval.Suffix = "ms";
         nearbyFoodIntervalSlider = new OreSlider
         {
-            Location = new Point(20, 338),
+            Location = new Point(20, 201),
             Size = new Size(482, 39),
             Minimum = 0,
             Maximum = 1000,
             Value = NearbyIntervalScale.Position(settings.NearbyFoodIntervalMs)
         };
         direct.Controls.Add(nearbyFoodIntervalSlider);
-        LabelAt(direct, L10n.T("拖动滑块或点击数字输入；1000 ms = 1 秒"), 20, 392, 704, 30).ForeColor = OreTheme.Muted;
-        LabelAt(direct, L10n.T("最小尝试间隔；原生动作未结束时等待"), 20, 426, 704, 30).ForeColor = OreTheme.Muted;
-        var installNearby = ButtonAt(direct, L10n.T("安装 / 更新直接收集组件"), 20, 465, 704);
-        installNearby.Click += delegate
-        {
-            InstallNearbyComponent();
-        };
-        var progress = Card(pages[4], 2212, 184);
-        LabelAt(progress, L10n.T("附近目标状态"), 20, 16, 704, 30);
-        nearbyLootNote = (PixelLabel)LabelAt(progress, L10n.T("勾选附近交互后开始检测\n不寻路；成功结果仍需游戏确认"), 20, 59, 704, 76);
+        LabelAt(direct, L10n.T("滑块或直接输入数字；1000 ms = 1 秒"), 20, 256, 704, 28).ForeColor = OreTheme.Muted;
+        LabelAt(direct, L10n.T("保持原生范围；动作未结束时等待，不自动寻路"), 20, 294, 704, 28).ForeColor = OreTheme.Muted;
+        var progress = StatusCard(pages[2], 692, 140);
+        LabelAt(progress, L10n.T("拾取状态"), 20, 16, 704, 30);
+        nearbyLootNote = (PixelLabel)LabelAt(progress, L10n.T("开启目标类型后按 F8 开始"), 20, 58, 704, 68);
         nearbyLootNote.PixelScale = .85f;
-        LabelAt(progress, L10n.T("F9 停止所有自动操作"), 20, 141, 704, 28).ForeColor = OreTheme.Muted;
+        var components = StatusCard(pages[3], 128, 220);
+        LabelAt(components, L10n.T("全部游戏组件"), 20, 16, 704, 30);
+        LabelAt(components, L10n.T("收集、战斗、装备回收统一安装；自动识别游戏目录"), 20, 58, 704, 28).ForeColor = OreTheme.Muted;
+        componentInstallNote = (PixelLabel)LabelAt(components, L10n.T("首次使用或更新时，请保存进度并完全退出游戏。"), 20, 98, 704, 60);
+        componentInstallNote.PixelScale = .85f;
+        componentInstallButton = ButtonAt(components, L10n.T("安装 / 更新全部组件"), 20, 164, 704);
+        componentInstallButton.Click += delegate
+        {
+            InstallAllComponents();
+        };
+        var native = Card(pages[3], 360, 148);
+        LabelAt(native, L10n.T("前台也使用原生战斗"), 20, 16, 600, 30);
+        combatNativeEnabled = CheckAt(native, "", 660, 14, 64, settings.CombatNative);
+        LabelAt(native, L10n.T("原生模式不移动鼠标；组件缺失时等待"), 20, 56, 704, 30).ForeColor = OreTheme.Muted;
+        nativeCombatNote = (PixelLabel)LabelAt(native, L10n.T("组件缺失时暂停对应动作"), 20, 98, 704, 40);
+        nativeCombatNote.PixelScale = .8f;
         nearbyChestsEnabled.CheckedChanged += delegate
         {
             Changed();
@@ -220,9 +209,13 @@ sealed partial class ToolboxForm
         };
         combatRange.ValueChanged += delegate
         {
-            Changed();
+            CombatRangeChanged(false);
         };
-        var enabledCard = Card(pages[5], 0, 276);
+        combatRangeSlider.ValueChanged += delegate
+        {
+            CombatRangeChanged(true);
+        };
+        var enabledCard = Card(pages[5], 0, 244);
         LabelAt(enabledCard, L10n.T("新拾取装备整理"), 20, 16, 600, 30);
         equipmentEnabled = CheckAt(enabledCard, "", 660, 14, 64, false);
         LabelAt(enabledCard, L10n.T("启停快捷键"), 20, 64, 460, 30);
@@ -235,23 +228,19 @@ sealed partial class ToolboxForm
         {
             EquipmentHotkeyChanged();
         };
-        equipmentState = (PixelLabel)LabelAt(enabledCard, L10n.T("整理已关闭；启用时记录已有物品"), 20, 111, 704, 45);
+        equipmentState = (PixelLabel)LabelAt(enabledCard, L10n.T("整理已关闭；启用时记录已有物品"), 20, 102, 704, 35);
         equipmentState.PixelScale = .85f;
         equipmentState.ForeColor = OreTheme.Muted;
-        var dependency = (PixelLabel)LabelAt(enabledCard, L10n.T("仅自动出售需 Blueprint Loader（蓝图加载器）和装备回收组件"), 20, 160, 704, 44);
+        var dependency = (PixelLabel)LabelAt(enabledCard, L10n.T("仅自动出售需 Blueprint Loader（蓝图加载器）和装备回收组件"), 20, 144, 704, 44);
         dependency.PixelScale = .8f;
         dependency.ForeColor = OreTheme.Muted;
-        var install = ButtonAt(enabledCard, L10n.T("安装 / 更新装备回收组件"), 20, 215, 704);
-        install.Click += delegate
-        {
-            InstallEquipmentComponent();
-        };
+        LabelAt(enabledCard, L10n.T("安装或更新请前往「设置」"), 20, 198, 704, 35).ForeColor = OreTheme.Muted;
         equipmentEnabled.CheckedChanged += delegate
         {
             SetEquipmentEnabled(equipmentEnabled.Checked);
         };
         BuildEquipmentVisual();
-        var filters = Card(pages[5], 728, 480);
+        var filters = Card(pages[5], 256, 480);
         LabelAt(filters, L10n.T("分类稀有度上限"), 20, 15, 704, 30);
         LabelAt(filters, L10n.T("装备类别"), 20, 56, 234, 28);
         LabelAt(filters, L10n.T("普通装备"), 276, 56, 212, 28);
@@ -264,7 +253,7 @@ sealed partial class ToolboxForm
             stormRarity[i] = RaritySelect(filters, 510, at, (int)equipmentPolicy.Storm[i]);
         }
 
-        var protect = Card(pages[5], 1220, 190);
+        var protect = Card(pages[5], 748, 190);
         LabelAt(protect, L10n.T("已装备、锁定、附魔装备始终保留"), 20, 15, 704, 31);
         keepUpgrades = CheckAt(protect, L10n.T("保留更好的装备"), 20, 59, 338, equipmentPolicy.KeepUpgrades);
         keepMerchant = CheckAt(protect, L10n.T("保留商店购买"), 380, 59, 338, equipmentPolicy.KeepMerchant);
@@ -273,7 +262,7 @@ sealed partial class ToolboxForm
         var safe = (PixelLabel)LabelAt(protect, L10n.T("未确认的属性与来源也会保留"), 20, 151, 704, 28);
         safe.ForeColor = OreTheme.Muted;
         safe.PixelScale = .85f;
-        var preview = Card(pages[5], 1422, 420);
+        var preview = StatusCard(pages[5], 950, 420);
         LabelAt(preview, L10n.T("待卖清单预览"), 20, 16, 704, 30);
         LabelAt(preview, L10n.T("新拾取模式忽略建立基线时已有的全部物品"), 20, 55, 704, 39).ForeColor = OreTheme.Muted;
         previewNewEquipment = ButtonAt(preview, L10n.T("预览新拾取"), 20, 103, 338);
@@ -502,7 +491,26 @@ sealed partial class ToolboxForm
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 BackgroundColor = OreTheme.Background,
                 RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BorderStyle = BorderStyle.None,
+                EnableHeadersVisualStyles = false,
+                GridColor = OreTheme.Edge,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = OreTheme.Card,
+                    ForeColor = OreTheme.Text,
+                    SelectionBackColor = OreTheme.Green,
+                    SelectionForeColor = OreTheme.Text
+                },
+                ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = OreTheme.Surface,
+                    ForeColor = OreTheme.Text,
+                    SelectionBackColor = OreTheme.Surface,
+                    SelectionForeColor = OreTheme.Text
+                }
             };
             f.Controls.Add(list);
             var icons = new DataGridViewImageColumn
@@ -585,5 +593,25 @@ sealed partial class ToolboxForm
                     ToolboxLog.Error("Equipment.Export", e);
                     equipmentResult.Text = e.Message;
                 }
+    }
+
+    // 两列拾取开关的统一尺寸，缩放时仍由 RecordLayout 处理。
+    CheckBox LootTypeCard(int x, int y, string title, string help, bool enabled)
+    {
+        var card = Card(pages[2], y, 116);
+        card.Left = x;
+        card.Width = 366;
+        LabelAt(card, L10n.T(title), 16, 15, 272, 30);
+        var toggle = CheckAt(card, "", 282, 14, 64, enabled);
+        var note = (PixelLabel)LabelAt(card, L10n.T(help), 16, 58, 334, 44);
+        note.PixelScale = .8f;
+        note.ForeColor = OreTheme.Muted;
+        return toggle;
+    }
+
+    // 统计控件树中的实际安装按钮，翻译后的标题通过规范键还原。
+    static int CountInstallButtons(Control parent)
+    {
+        return parent.Controls.Cast<Control>().Sum(c => (c is Button && L10n.Canonical(c.Text) == "安装 / 更新全部组件" ? 1 : 0) + CountInstallButtons(c));
     }
 }

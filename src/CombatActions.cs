@@ -177,6 +177,37 @@ sealed partial class ToolboxForm
 {
     CheckBox combatAttackEnabled, combatEncounterEnabled, combatArtifactsEnabled;
     OreNumber combatRange;
+    OreSlider combatRangeSlider;
+    PixelLabel combatRangeNote;
+    bool combatRangeUpdating;
+    long lastMeleeRangeDisplay = -10000;
+    // 明确工具触发距离与游戏实际武器范围的区别，不用固定数值猜测游戏上限。
+    void RefreshMeleeRangeNote(double? nativeRange)
+    {
+        combatRangeNote.Text = nativeRange.HasValue ? String.Format(L10n.T("游戏当前近战范围 {0}；工具判定上限 500\n命中距离由武器与攻击形状决定"), nativeRange.Value.ToString("0.#")) : L10n.T("游戏近战范围待连接读取；工具判定上限 500\n数值为游戏单位，不扩大原生攻击范围");
+    }
+
+    // 滑块与数字输入双向同步；避免递归事件，并沿用 Changed 保存与停止规则。
+    void CombatRangeChanged(bool slider)
+    {
+        if (combatRangeUpdating)
+            return;
+        combatRangeUpdating = true;
+        try
+        {
+            if (slider)
+                combatRange.Value = combatRangeSlider.Value;
+            else
+                combatRangeSlider.Value = (int)combatRange.Value;
+        }
+        finally
+        {
+            combatRangeUpdating = false;
+        }
+
+        Changed();
+    }
+
     PixelLabel combatRuntimeNote;
     CombatPressLease combatLease;
     long lastCombatRead = -10000, lastCombatAttack = -10000, lastCombatArtifact = -10000, cursorMovedAt, lastCombatStatusLog = -10000;
@@ -227,6 +258,8 @@ sealed partial class ToolboxForm
     // 检测旧输入路径的人工操作与稳定状态。
     bool CombatUserIdle(long now)
     {
+        if (!GameForeground())
+            return settings.BackgroundAuto;
         Point point;
         if (!ToolboxInput.CombatCursor(out point))
             return false;
@@ -263,19 +296,20 @@ sealed partial class ToolboxForm
             return;
         lastCombatRead = now;
         combatState = reader.ReadCombatState();
+        RefreshMeleeRangeNote(combatState.MeleeRange);
         bool reportStatus = now - lastCombatStatusLog >= 1000;
         if (reportStatus)
             lastCombatStatusLog = now;
-        if (!settings.CombatNative && combatState.CanAttempt && !combatState.CanAim)
+        if (!UseNativeCombat && combatState.CanAttempt && !combatState.CanAim)
             ToolboxLog.Limited("Combat.CameraUnavailable", combatState.CameraReason);
         combatRuntimeNote.Text = !combatState.CanAttempt ? L10n.T("等待战斗场景；菜单或状态不明时暂停") : String.Format(L10n.T("附近有效敌人 {0} · 原地近战范围 {1}"), combatState.Targets.Count, settings.CombatRange);
-        if (settings.CombatEncounter && !settings.CombatNative)
+        if (settings.CombatEncounter && !UseNativeCombat)
         {
             combatRuntimeNote.Text = L10n.T("遇敌自动攻击需要开启原生模式");
             ToolboxLog.Limited("Combat.EncounterBlocked", "native mode is off");
         }
 
-        if (!settings.CombatNative && settings.CombatAttack && combatState.CanAttempt && (!combatState.LeftMousePrimary || combatState.RootKey == 0 || CombatBindingConflict(combatState.RootKey)))
+        if (!UseNativeCombat && settings.CombatAttack && combatState.CanAttempt && (!combatState.LeftMousePrimary || combatState.RootKey == 0 || CombatBindingConflict(combatState.RootKey)))
             combatRuntimeNote.Text = L10n.T("检查游戏左键主操作、原地攻击键及触发键冲突");
         if (!combatState.CanAttempt)
         {
@@ -284,14 +318,14 @@ sealed partial class ToolboxForm
         }
 
         // 低血量恢复优先；本轮询位于恢复动作排队之后。
-        var artifact = NativeCombatRule.ArtifactTarget(combatState, settings.CombatNative && settings.CombatEncounter);
-        if (reportStatus && settings.CombatNative && settings.CombatArtifacts)
+        var artifact = NativeCombatRule.ArtifactTarget(combatState, UseNativeCombat && settings.CombatEncounter);
+        if (reportStatus && UseNativeCombat && settings.CombatArtifacts)
             ToolboxLog.Limited("Combat.NativeArtifactStatus", artifact == null ? "no eligible enemy targeting player; candidates=" + combatState.Targets.Count : !settings.AutoSlots.Any(v => v) ? "no selected artifact slots" : now - lastCombatArtifact < settings.RetrySeconds * 1000L ? "artifact retry interval" : NativeCombatRule.ArtifactSlots(settings, cooldowns, souls, artifactCosts).Length == 0 ? "no ready slot within soul budget" : "ready; target=" + artifact.Id);
         if (settings.CombatArtifacts && !settings.AutoSlots.Any(v => v))
             ToolboxLog.Limited("Combat.ArtifactsBlocked", "no artifact slots selected on Auto artifacts page; potion-only health mode; no artifact input requested");
         if (settings.CombatArtifacts && artifact != null && now - lastCombatArtifact >= settings.RetrySeconds * 1000L)
         {
-            var keys = settings.CombatNative ? NativeCombatRule.ArtifactSlots(settings, cooldowns, souls, artifactCosts) : CombatActionRule.ArtifactKeys(settings, cooldowns, souls, artifactCosts);
+            var keys = UseNativeCombat ? NativeCombatRule.ArtifactSlots(settings, cooldowns, souls, artifactCosts) : CombatActionRule.ArtifactKeys(settings, cooldowns, souls, artifactCosts);
             if (keys.Length > 0)
             {
                 requests.Enqueue(new InputRequest { Keys = keys, Description = L10n.T("战斗提前使用法器"), CombatArtifacts = true, TargetId = artifact.Id, CombatSession = combatState.Session, Generation = generation, Expires = clock.ElapsedMilliseconds + 1200, Controller = XboxPad.ActiveMode });
@@ -299,15 +333,15 @@ sealed partial class ToolboxForm
             }
         }
 
-        var target = settings.CombatNative ? NativeCombatRule.AttackTarget(combatState, settings.CombatRange, settings.CombatEncounter) : CombatActionRule.AttackTarget(combatState, settings.CombatRange);
-        bool idle = settings.CombatNative ? CombatScheduling.NativeInputReady(combatState, settings, ToolboxInput.Held, settings.CombatEncounter) : CombatUserIdle(now);
-        if (reportStatus && settings.CombatNative && (settings.CombatAttack || settings.CombatEncounter))
+        var target = UseNativeCombat ? NativeCombatRule.AttackTarget(combatState, settings.CombatRange, settings.CombatEncounter) : CombatActionRule.AttackTarget(combatState, settings.CombatRange);
+        bool idle = UseNativeCombat ? CombatScheduling.NativeInputReady(combatState, settings, GameInputHeld, settings.CombatEncounter) : CombatUserIdle(now);
+        if (reportStatus && UseNativeCombat && (settings.CombatAttack || settings.CombatEncounter))
             ToolboxLog.Limited("Combat.NativeStatus", !combatState.PlayerVelocity.Valid ? "velocity unavailable" : !settings.CombatEncounter && combatState.PlayerVelocity.Length > 30 ? "player moving; speed=" + combatState.PlayerVelocity.Length.ToString("0.0") : target == null ? "no valid enemy inside melee range=" + settings.CombatRange + "; candidates=" + combatState.Targets.Count + " nearest=" + (combatState.Targets.Count == 0 ? "none" : combatState.Targets.Min(t => t.Distance).ToString("0.0")) : !idle ? "manual command held" : now - lastCombatAttack < 350 ? "native melee interval" : "ready; target=" + target.Id);
-        if (settings.CombatAttack && !settings.CombatNative)
+        if (settings.CombatAttack && !UseNativeCombat)
             ToolboxLog.Limited("Combat.Status", !combatState.CanAim ? "camera unavailable" : XboxPad.ActiveMode ? "controller mode; automatic melee is keyboard/mouse only" : CombatBindingConflict(combatState.RootKey) ? "root/trigger binding conflict" : target == null ? "no valid enemy inside melee range=" + settings.CombatRange + "; nearby candidates=" + combatState.Targets.Count : !idle ? "manual input; automatic melee paused" : "ready; target=" + target.Id);
-        if ((settings.CombatAttack || settings.CombatNative && settings.CombatEncounter) && (settings.CombatNative || !XboxPad.ActiveMode) && target != null && (settings.CombatNative || !CombatBindingConflict(combatState.RootKey)) && now - lastCombatAttack >= 350 && idle)
+        if ((settings.CombatAttack || UseNativeCombat && settings.CombatEncounter) && (UseNativeCombat || !XboxPad.ActiveMode) && target != null && (UseNativeCombat || !CombatBindingConflict(combatState.RootKey)) && now - lastCombatAttack >= 350 && idle)
         {
-            if (!settings.CombatNative)
+            if (!UseNativeCombat)
             {
                 Rectangle area;
                 Point point;
@@ -326,13 +360,13 @@ sealed partial class ToolboxForm
         if (!Active(request) || clock.ElapsedMilliseconds > request.Expires || request.Generation != generation)
             return false;
         current = reader.ReadCombatState();
-        return current.CanAttempt && current.Session == request.CombatSession && ToolboxInput.Front(reader.Pid) && !ToolboxInput.Modifiers() && Active(request) && request.Generation == generation && clock.ElapsedMilliseconds <= request.Expires;
+        return current.CanAttempt && current.Session == request.CombatSession && (UseNativeCombat || GameForeground()) && (!GameForeground() || !ToolboxInput.Modifiers()) && Active(request) && request.Generation == generation && clock.ElapsedMilliseconds <= request.Expires;
     }
 
     // 执行已校验近战请求，按设置路由到原生/旧输入模式。
     async Task RunCombatAttack(InputRequest request, CancellationToken cancel)
     {
-        if (settings.CombatNative)
+        if (UseNativeCombat)
         {
             await RunNativeMelee(request, cancel);
             return;

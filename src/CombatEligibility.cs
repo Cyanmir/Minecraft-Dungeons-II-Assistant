@@ -18,6 +18,67 @@ sealed class CombatReadiness
 sealed partial class HealthReader
 {
     readonly Dictionary<long, Identity> combatWidgets = new Dictionary<long, Identity>();
+    // 范围仅作为说明，每秒刷新一次，避免在 75ms 战斗轮询中重复枚举属性集。
+    Identity meleeRangeOwner;
+    double? cachedMeleeRange;
+    int meleeRangeSampled;
+    // UI 可在战斗开关关闭时读取原生范围，仍通过 Pawn 身份校验。
+    public double? MeleeRangeForUi()
+    {
+        try
+        {
+            return ReadMeleeRange(Pawn());
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    double? ReadMeleeRange(Identity player)
+    {
+        int now = Environment.TickCount;
+        if (meleeRangeOwner != null && meleeRangeOwner.Address == player.Address && meleeRangeOwner.Serial == player.Serial && (uint)(now - meleeRangeSampled) < 1000 && Valid(player))
+            return cachedMeleeRange;
+        meleeRangeOwner = player;
+        meleeRangeSampled = now;
+        cachedMeleeRange = null;
+        try
+        {
+            Identity asc = Token(M.Q(player.Address + Offset(player, "AbilitySystemComponent", 8)));
+            long header = asc.Address + Offset(asc, "SpawnedAttributes", 16), data = M.Q(header);
+            int count = M.I(header + 8), capacity = M.I(header + 12);
+            if (count < 1 || count > 128 || capacity < count || capacity > 512)
+                return null;
+            int current = Prop(Struct("GameplayAttributeData", 16), "CurrentValue", 4).Offset;
+            if (current != 12)
+                return null;
+            Identity melee = null;
+            for (int i = 0; i < count; i++)
+            {
+                Identity candidate = Token(M.Q(data + i * 8));
+                if (ClassName(candidate.Class) != "ATR_MeleeAttack")
+                    continue;
+                if (melee != null || (M.Q(candidate.Address + 32) != player.Address && M.Q(candidate.Address + 32) != asc.Address))
+                    return null;
+                melee = candidate;
+            }
+
+            if (melee == null)
+                return null;
+            double range = M.F(melee.Address + Offset(melee, "MeleeAttackRange", 16) + current);
+            if (!CombatNumber(range) || range < 20 || range > 1000 || !Valid(player) || !Valid(asc) || !Valid(melee) || M.Q(header) != data || M.I(header + 8) != count || M.Q(asc.Address + Offset(asc, "AvatarActor", 8)) != player.Address)
+                return null;
+            cachedMeleeRange = range;
+            return cachedMeleeRange;
+        }
+        catch (Exception e)
+        {
+            AdaptationRecord.Set("combat.melee.range.read", e.Message);
+            return null;
+        }
+    }
+
     // 读取生命、菜单和原生可操作状态，任何未知前提继续阻止动作。
     CombatReadiness ReadCombatReadiness(Identity player)
     {

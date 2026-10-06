@@ -355,7 +355,8 @@ sealed partial class ToolboxForm
     // 创建装备行列表及状态区，绑定只读展示数据。
     void BuildEquipmentVisual()
     {
-        var card = Card(pages[5], 288, 428);
+        // 设置先于执行，清单跟在预览操作之后；只改容器位置，不改采样和回执。
+        var card = StatusCard(pages[5], 1382, 428);
         LabelAt(card, L10n.T("回收清单与进度"), 20, 16, 704, 30);
         equipmentVisualSummary = (PixelLabel)LabelAt(card, "", 20, 55, 704, 38);
         equipmentVisualSummary.PixelScale = .85f;

@@ -222,13 +222,27 @@ static class GdkBridgeTransport
     internal static Receipt ReadReceipt(Pair pair)
     {
         GdkSaveStorage.RequireContained(pair.Receipt, pair.Root);
-        return ParseReceipt(EquipmentSaveCodec.Parse(Read(pair.Receipt, 65536), "Receipt", "Status", pair.Mod).Value, pair.Protocol);
+        return ParseReceipt(EquipmentSaveCodec.Parse(ReadReliable(pair.Receipt), "Receipt", "Status", pair.Mod).Value, pair.Protocol);
     }
 
     // 在允许的读重试范围内处理文件滚动和共享状态变化。
     internal static byte[] ReadReliable(string path)
     {
-        return Read(path, 65536);
+        // Stop 的场景核对也会读取回执；短暂文件占用不能跳过 OFF 清理。
+        var watch = Stopwatch.StartNew();
+        while (true)
+        {
+            try
+            {
+                return Read(path, 65536);
+            }
+            catch (IOException)
+            {
+                if (watch.ElapsedMilliseconds >= 1200)
+                    throw;
+                Thread.Sleep(20);
+            }
+        }
     }
 
     // 识别断续写入的命令，不能把半份数据交给游戏执行。
