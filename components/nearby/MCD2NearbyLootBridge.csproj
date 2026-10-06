@@ -1,0 +1,18 @@
+<Project Sdk="NeoRune.Sdk/0.3.1">
+  <!-- 组件/绑定工程属性；版本和平台配置与工具端协议独立。 -->
+  <PropertyGroup>
+    <!-- 构建不自动安装进游戏；组件更新由工具安装器在游戏退出后完成。 -->
+    <NeoRuneInstall>false</NeoRuneInstall>
+    <!-- 组件包名属于工具识别和存档类归属 ABI，更改需同步两端。 -->
+    <NeoRuneModName>MCD2NearbyLootBridge</NeoRuneModName>
+    <!-- 启用可空标注用于编译检查；不改变原生蓝图字段布局。 -->
+    <Nullable>annotations</Nullable>
+    <!-- 组件/绑定程序集产品版本；不是收集/战斗协议号。 -->
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <!-- 明确引用编译期绑定或 SDK 定义；不要加入本机游戏程序集绝对路径。 -->
+  <ItemGroup>
+    <!-- 引用本仓库的类型绑定工程；NeoRune 编译时使用这些原生声明。 -->
+    <ProjectReference Include="../bindings/nearby/nearby-bindings.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,37 @@
+# Local builds and SDKs
+dist/
+release/
+bin/
+obj/
+**/bin/
+**/obj/
+.vs/
+.vscode/
+work/
+outputs/
+sdk/
+dotnet/
+.nuget/
+private-assets/
+# Personal configuration, captures and temporary diagnostics
+*.exe
+*.dll
+*.pdb
+*.zip
+*.sav
+*.log
+*.tmp
+*.dmp
+*.etl
+.env
+.env.*
+reports/
+logs/
+screenshots/
+captures/
+test-results/
+equipment-presentation.bin.gz
+# OS / editor state
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 组件/绑定工程属性；版本和平台配置与工具端协议独立。 -->
+  <PropertyGroup>
+    <!-- 绑定工程使用 .NET 10；玩家只需工具 EXE 与加载器，不需安装开发 SDK。 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- 启用可空标注用于编译检查；不改变原生蓝图字段布局。 -->
+    <Nullable>enable</Nullable>
+    <!-- 组件/绑定程序集产品版本；不是收集/战斗协议号。 -->
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <!-- 明确引用编译期绑定或 SDK 定义；不要加入本机游戏程序集绝对路径。 -->
+  <ItemGroup>
+    <!-- 经 NuGet 取得 NeoRune SDK 并生成包路径属性；不把 SDK 文件提交到仓库。 -->
+    <PackageReference Include="NeoRune.Sdk" Version="0.3.1" GeneratePathProperty="true" ExcludeAssets="all" />
+    <!-- 仅引用 SDK 提供的编译定义，Private=false 避免复制为产品依赖。 -->
+    <Reference Include="NeoRune.Abstractions" HintPath="$(PkgNeoRune_Sdk)/ref/NeoRune.Abstractions.dll" Private="false" />
+    <!-- 仅引用 SDK 提供的编译定义，Private=false 避免复制为产品依赖。 -->
+    <Reference Include="NeoRune.Game" HintPath="$(PkgNeoRune_Sdk)/ref/NeoRune.Game.dll" Private="false" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,791 @@
+{
+  "gameSHA256": "231147BD0C655A4AE73F90873675D42917F2BFB3A9EE164FC64F217D6D6BD4EF",
+  "allowed": [
+    "SW.Item.Artifact.RallyingHorn",
+    "SW.Item.Artifact.TotemOfRegeneration",
+    "SW.Item.Artifact.SoulHarvester",
+    "SW.Item.Artifact.PicnicBlanket",
+    "SW.Item.Artifact.CorruptedBeacon",
+    "SW.Item.Artifact.CorruptedSeeds",
+    "SW.Item.Artifact.DeathcapMushroom",
+    "SW.Item.Artifact.TotemOfShielding",
+    "SW.Item.Artifact.TotemOfCasting",
+    "SW.Item.Artifact.SmokeBomb",
+    "SW.Item.Artifact.RedstoneMines",
+    "SW.Item.Artifact.WitchesBrew",
+    "SW.Item.Artifact.Satchel.Fire",
+    "SW.Item.Artifact.Satchel.Freezing",
+    "SW.Item.Artifact.Satchel.Poison",
+    "SW.Item.Artifact.Satchel.Conductive",
+    "SW.Item.Artifact.CreeperCandle",
+    "SW.Item.Artifact.LightningRod",
+    "SW.Item.Artifact.MaimingMushroom",
+    "SW.Item.Artifact.HasteMushroom",
+    "SW.Item.Artifact.WarriorsDrums",
+    "SW.Item.Artifact.CarapaceOcarina",
+    "SW.Item.Artifact.FightersFife",
+    "SW.Item.Artifact.Grindstone",
+    "SW.Item.Artifact.IronHideLute",
+    "SW.Item.Artifact.WardingChimes",
+    "SW.Item.Artifact.WarBanner",
+    "SW.Item.Artifact.Honeypot",
+    "SW.Item.Artifact.FlameSceptre",
+    "SW.Item.Artifact.BlizzardStaff",
+    "SW.Item.Artifact.FireBracelet",
+    "SW.Item.Artifact.FrostBracelet",
+    "SW.Item.Artifact.PoisonBracelet",
+    "SW.Item.Artifact.ConductiveBracelet",
+    "SW.Item.Artifact.Powershaker",
+    "SW.Item.Artifact.FireworkQuiver",
+    "SW.Item.Artifact.FlameQuiver",
+    "SW.Item.Artifact.PoisonQuiver",
+    "SW.Item.Artifact.FrostQuiver",
+    "SW.Item.Artifact.LightningQuiver",
+    "SW.Item.Artifact.Quiver"
+  ],
+  "excluded": [],
+  "runtimeVerified": false,
+  "protocol": 2,
+  "lifecycles": [
+    {
+      "type": "SW.Item.Artifact.RallyingHorn",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Property.Artifact",
+        "SW.Archetype.Tank",
+        "SW.Archetype.Support",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Archetype.Summoner"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.TotemOfRegeneration",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Property.Well",
+        "SW.Archetype.Support",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Archetype.Summoner"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.SoulHarvester",
+      "input": "charging",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Artifact.Property.Soul.Charging",
+        "SW.Archetype.Mage",
+        "SW.Artifact.InputType.Charging",
+        "SW.Item.Property.Elemental.Soul"
+      ],
+      "originalHeldData": [
+        {
+          "InstancedStructScriptStruct": "/Script/SpicewoodGAS.GA_ChargeSoulsInstanceData",
+          "MaxChargePeriods": 6,
+          "PaymentPeriodSoulCost": 3,
+          "PaymentPeriodInterval": 1,
+          "FizzleThreshold": 0,
+          "FizzleAnimationSectionName": "None",
+          "AnimationSections": [
+            {
+              "SoulPaymentPeriods": 2,
+              "AnimationSection": "Start2"
+            },
+            {
+              "SoulPaymentPeriods": 4,
+              "AnimationSection": "Start3"
+            }
+          ],
+          "ReleaseAnimationSectionName": "Loop3End",
+          "ReleaseEvents": [
+            {
+              "SoulPaymentPeriods": 0,
+              "ReleaseEvent": {
+                "TagName": "SW.GameplayEvent.Soul.Charging.Activate.1"
+              }
+            },
+            {
+              "SoulPaymentPeriods": 2,
+              "ReleaseEvent": {
+                "TagName": "SW.GameplayEvent.Soul.Charging.Activate.2"
+              }
+            },
+            {
+              "SoulPaymentPeriods": 4,
+              "ReleaseEvent": {
+                "TagName": "SW.GameplayEvent.Soul.Charging.Activate.3"
+              }
+            }
+          ]
+        }
+      ],
+      "maxHoldSeconds": 6.2,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.PicnicBlanket",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Support",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.CorruptedBeacon",
+      "input": "channeling",
+      "targeting": true,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Property.Artifact",
+        "SW.Artifact.Property.Targeting",
+        "SW.Artifact.Property.Soul.Channeling",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Property.Soul.NoInitialCost",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.Channeling",
+        "SW.Item.Property.Elemental.Soul"
+      ],
+      "originalHeldData": [
+        {
+          "InstancedStructScriptStruct": "/Script/SpicewoodGAS.GA_ChannelSoulsInstanceData",
+          "SoulCost": 20,
+          "AnticipationDelay": 0.254,
+          "ReleaseAnimationSectionName": "None"
+        }
+      ],
+      "maxHoldSeconds": 2.2,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.CorruptedSeeds",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Property.Artifact",
+        "SW.Archetype.Mage",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Poison"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.DeathcapMushroom",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.TotemOfShielding",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Support",
+        "SW.Archetype.Tank",
+        "SW.Artifact.InputType.OneShot",
+        "SW.EffectTemplateGroup.Archetype.Summoner"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.TotemOfCasting",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Property.Well",
+        "SW.Archetype.Mage",
+        "SW.Archetype.Support",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.SmokeBomb",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Trickster",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.RedstoneMines",
+      "input": "oneshot",
+      "targeting": true,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.Property.Targeting"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.WitchesBrew",
+      "input": "oneshot",
+      "targeting": true,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Artifact.Property.Targeting",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Satchel.Fire",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Fire"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Satchel.Freezing",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Frost"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Satchel.Poison",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Poison"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Satchel.Conductive",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Lightning"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.CreeperCandle",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.LightningRod",
+      "input": "channeling",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Artifact.Property.Soul.Channeling",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Property.Soul.NoInitialCost",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.Channeling",
+        "SW.Item.Property.Elemental.Lightning"
+      ],
+      "originalHeldData": [
+        {
+          "InstancedStructScriptStruct": "/Script/SpicewoodGAS.GA_ChannelSoulsInstanceData",
+          "SoulCost": 20,
+          "AnticipationDelay": 0.519,
+          "TimedEvents": [
+            {
+              "Tag": {
+                "TagName": "SW.GameplayEvent.Soul.Channeling.LightningRodActivate"
+              },
+              "Delay": 1.1,
+              "Loop": true,
+              "Period": 1.1
+            }
+          ],
+          "ReleaseAnimationSectionName": "LoopEnd"
+        }
+      ],
+      "maxHoldSeconds": 2.2,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.MaimingMushroom",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.HasteMushroom",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Trickster",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.WarriorsDrums",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Archetype.Trickster",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.CarapaceOcarina",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Tank",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FightersFife",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Archetype.Trickster",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Archetype.Summoner"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Grindstone",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.IronHideLute",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Tank",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.WardingChimes",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Tank",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.WarBanner",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Archetype.Support",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Archetype.Summoner"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Honeypot",
+      "input": "oneshot",
+      "targeting": true,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Artifact.Property.Targeting",
+        "SW.Archetype.Mage",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Artifact.Category.Offensive",
+        "SW.Archetype.Summoner"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FlameSceptre",
+      "input": "charging",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Artifact.Property.Soul.Charging",
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.Charging",
+        "SW.Item.Property.Elemental.Fire"
+      ],
+      "originalHeldData": [
+        {
+          "InstancedStructScriptStruct": "/Script/SpicewoodGAS.GA_ChargeSoulsInstanceData",
+          "MaxChargePeriods": 8,
+          "PaymentPeriodSoulCost": 5,
+          "PaymentPeriodInterval": 0.5,
+          "FizzleThreshold": 0,
+          "FizzleAnimationSectionName": "None",
+          "AnimationSections": [
+            {
+              "SoulPaymentPeriods": 2,
+              "AnimationSection": "Start2"
+            },
+            {
+              "SoulPaymentPeriods": 5,
+              "AnimationSection": "Start3"
+            }
+          ],
+          "ReleaseAnimationSectionName": "Loop3End",
+          "ReleaseEvents": [
+            {
+              "SoulPaymentPeriods": 0,
+              "ReleaseEvent": {
+                "TagName": "SW.GameplayEvent.Soul.Charging.Activate.1"
+              }
+            },
+            {
+              "SoulPaymentPeriods": 2,
+              "ReleaseEvent": {
+                "TagName": "SW.GameplayEvent.Soul.Charging.Activate.2"
+              }
+            },
+            {
+              "SoulPaymentPeriods": 5,
+              "ReleaseEvent": {
+                "TagName": "SW.GameplayEvent.Soul.Charging.Activate.3"
+              }
+            }
+          ]
+        }
+      ],
+      "maxHoldSeconds": 4.2,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.BlizzardStaff",
+      "input": "channeling",
+      "targeting": true,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Artifact.Property.Soul.Channeling",
+        "SW.Archetype.Mage",
+        "SW.Artifact.Property.Targeting",
+        "SW.Artifact.Property.Soul.NoInitialCost",
+        "SW.Artifact.Category.Offensive",
+        "SW.Artifact.InputType.Channeling",
+        "SW.Item.Property.Elemental.Frost"
+      ],
+      "originalHeldData": [
+        {
+          "InstancedStructScriptStruct": "/Script/SpicewoodGAS.GA_ChannelSoulsInstanceData",
+          "SoulCost": 15,
+          "AnticipationDelay": 0.965,
+          "TimedEvents": [
+            {
+              "Tag": {
+                "TagName": "SW.GameplayEvent.Soul.Channeling.Anticipation.End"
+              },
+              "Delay": 0,
+              "Loop": true,
+              "Period": 0.448306
+            }
+          ],
+          "ReleaseAnimationSectionName": "LoopEnd"
+        }
+      ],
+      "maxHoldSeconds": 2.2,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FireBracelet",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Fire"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FrostBracelet",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Frost"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.PoisonBracelet",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Poison"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.ConductiveBracelet",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Elemental.Lightning"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Powershaker",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Item.Property.Artifact",
+        "SW.Property.Spawnable",
+        "SW.Archetype.Fighter",
+        "SW.Artifact.InputType.OneShot"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FireworkQuiver",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Artifact.Quiver"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FlameQuiver",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Artifact.Quiver",
+        "SW.Item.Property.Elemental.Fire"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.PoisonQuiver",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Artifact.Quiver",
+        "SW.Item.Property.Elemental.Poison"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.FrostQuiver",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Artifact.Quiver",
+        "SW.Item.Property.Elemental.Frost"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.LightningQuiver",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Property.Spawnable",
+        "SW.Item.Artifact.Quiver",
+        "SW.Item.Property.Elemental.Lightning"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    },
+    {
+      "type": "SW.Item.Artifact.Quiver",
+      "input": "oneshot",
+      "targeting": false,
+      "originalTraits": [
+        "SW.Archetype.Ranger",
+        "SW.Artifact.InputType.OneShot",
+        "SW.Item.Property.Artifact"
+      ],
+      "originalHeldData": [],
+      "maxHoldSeconds": 0,
+      "runtimeVerified": false
+    }
+  ],
+  "originalDefinitionSHA256": "939d903dbdf34a32d3ca46fd1860e9d9899a78c919ff7432c2ffb5c54483cfe8"
+}
