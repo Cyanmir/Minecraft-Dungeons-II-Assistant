@@ -119,7 +119,7 @@ static class GdkBridgeTransport
             throw new Exception("GDK write probe is restricted to the two captured components");
         if (protocolOverride != null)
         {
-            if (mod == "MCD2CombatBridge" && protocolOverride != "4" || mod == "MCD2NearbyLootBridge" && protocolOverride != "6")
+            if (mod == "MCD2CombatBridge" && protocolOverride != "5" || mod == "MCD2NearbyLootBridge" && protocolOverride != "6")
                 throw new Exception("Unsupported fixed mailbox protocol");
             protocol = protocolOverride;
         }

@@ -43,12 +43,25 @@ static class ComponentBundleInstaller
             return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");
     }
 
-    // 拒绝组件路径中的目录链接，确保安装和回滚只影响实际游戏目录。
-    static void CheckPath(string folder)
+    // 只检查 Paks 内的安装路径，与加载器保持相同边界。
+    // 目录链接检查仅限 Xbox 游戏目录，不追溯到盘符根目录。
+    // Paks、~mods 和组件目录仍拒绝链接；安装预检、写入及回滚共用此保护。
+    static void CheckPath(string paks, string folder)
     {
-        for (string path = Path.GetFullPath(folder); path != null; path = Path.GetDirectoryName(path))
+        string root = Path.GetFullPath(paks).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string target = Path.GetFullPath(folder);
+        // 带分隔符比较，避免相邻目录（例如 Paks-other）被误认为位于 Paks 内。
+        if (!target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new IOException(L10n.T("组件安装路径包含目录链接，请选择实际游戏目录"));
+        for (string path = target; path != null; path = Path.GetDirectoryName(path))
+        {
             if (Directory.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
                 throw new IOException(L10n.T("组件安装路径包含目录链接，请选择实际游戏目录"));
+            if (String.Equals(path, root, StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+
+        throw new IOException(L10n.T("组件安装路径包含目录链接，请选择实际游戏目录"));
     }
 
     // 构造全部计划后再写入；一个组件归属不明时，其他组件也不会先被更新。
@@ -63,7 +76,7 @@ static class ComponentBundleInstaller
                 Name = name,
                 Folder = Path.Combine(paks, "~mods", name)
             };
-            CheckPath(plan.Folder);
+            CheckPath(paks, plan.Folder);
             plan.Existed = Directory.Exists(plan.Folder);
             string manifest = Path.Combine(plan.Folder, Manifest);
             Dictionary<string, string> ownership = null;
@@ -158,7 +171,7 @@ static class ComponentBundleInstaller
             foreach (var plan in plans)
             {
                 guard();
-                CheckPath(plan.Folder);
+                CheckPath(paks, plan.Folder);
                 if (!plan.Existed && Directory.Exists(plan.Folder))
                     throw new IOException(String.Format(L10n.T("安装期间出现外部组件目录，未覆盖：{0}"), plan.Name));
                 // 再次核对旧内容，拒绝预检后被外部程序改写的文件。
@@ -192,7 +205,7 @@ static class ComponentBundleInstaller
                         try
                         {
                             guard();
-                            CheckPath(plan.Folder);
+                            CheckPath(paks, plan.Folder);
                             string path = Path.Combine(plan.Folder, file);
                             if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
                                 throw new IOException(path);

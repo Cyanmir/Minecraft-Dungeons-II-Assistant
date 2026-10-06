@@ -11,6 +11,15 @@ static partial class L10n
     {
         var added = new[]
         {
+            new[]
+            {
+                "已观察到药水充能消耗；回血由游戏结算",
+                "Potion charge consumption observed; healing is handled by the game",
+                "ポーションの使用回数消費を確認。回復量はゲームが処理",
+                "물약 충전 소모 확인. 회복은 게임에서 처리",
+                "已觀察到藥水充能消耗；回血由遊戲結算",
+                "已觀察到藥水充能消耗；回血由遊戲結算"
+            },
             new[] { "GDK 原生组件无法连接，请更新组件", "Cannot connect to the GDK component; update components", "GDK コンポーネントに接続できません。更新してください", "GDK 구성 요소에 연결할 수 없습니다. 업데이트하세요", "GDK 原生組件無法連接，請更新組件", "GDK 原生元件無法連接，請更新元件" },
             new[]
             {

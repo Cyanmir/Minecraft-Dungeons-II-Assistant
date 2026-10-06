@@ -1321,6 +1321,8 @@ sealed class InputRequest
     public int Delay, Generation;
     public long Expires;
     public bool Healing, Controller, Threat, CombatAttack, CombatArtifacts, CombatEvade, NearbyLoot;
+    // 显式标记人工法器组合，独立于自动恢复槽位；不能根据翻译后的动作描述推断类型。
+    public bool Hotbar;
 }
 
 // 主窗口的一个 partial 部分；事件处理与异步任务共用主窗口状态，退出时统一清理。
@@ -2995,11 +2997,11 @@ sealed partial class ToolboxForm : Form
     }
 
     // 将已校验输入请求交给执行通道，避免重入或覆盖运行中的请求。
-    void Queue(int[] keys, string name, int delay, bool healing, long now, bool controller = false)
+    void Queue(int[] keys, string name, int delay, bool healing, long now, bool controller = false, bool hotbar = false)
     {
         if (keys.Length == 0 || requests.Count >= 4)
             return;
-        requests.Enqueue(new InputRequest { Keys = keys, Description = name, Delay = delay, Generation = generation, Expires = now + 600, Healing = healing, Controller = controller });
+        requests.Enqueue(new InputRequest { Keys = keys, Description = name, Delay = delay, Generation = generation, Expires = now + 600, Healing = healing, Controller = controller, Hotbar = hotbar });
     }
 
     // 检查输入请求是否仍属于当前会话及启用状态。
@@ -3060,7 +3062,7 @@ sealed partial class ToolboxForm : Form
 
         bool active = scope && GameScope() && Form.ActiveForm == null && armed && readGate.Ready && !conflict && hp > 0 && (!gameFront || now - focusSince >= 600) && now >= suppressUntil;
         if (active && settings.ComboEnabled && padEdges.Pressed(settings.PadCombo))
-            Queue(settings.ComboKeys(), L10n.T("法器连发"), 0, false, now, true);
+            Queue(settings.ComboKeys(), L10n.T("法器连发"), 0, false, now, true, true);
     }
 
     // 主轮询入口：刷新遥测，再分别判断恢复、战斗、收集和整理请求。
@@ -3137,19 +3139,20 @@ sealed partial class ToolboxForm : Form
             bool shortcuts = active && ShortcutScope();
             bool comboDown = ToolboxInput.Held(settings.ComboTrigger);
             if (shortcuts && settings.ComboEnabled && comboDown && !comboWas)
-                Queue(settings.ComboKeys(), L10n.T("法器连发"), 0, false, now);
+                Queue(settings.ComboKeys(), L10n.T("法器连发"), 0, false, now, false, true);
             comboWas = comboDown;
             bool jump = gesture.Observe(ToolboxInput.Held(settings.JumpTrigger), ToolboxInput.Held(settings.AttackTrigger), shortcuts, now);
             if (jump && settings.JumpEnabled)
                 Queue(new int[] { settings.JumpKey }, L10n.T("跳劈补按"), settings.JumpDelay, false, now);
             bool automatic = active;
-            // 持续按住的原生法器要让位给当前确实可用的低血量恢复。
-            if (automatic && settings.HealEnabled && lowSamples >= 2 && healRule.Ready(hp, max, settings.Threshold, now, settings.RetrySeconds) && UseNativeCombat && currentAction != null && currentAction.CombatArtifacts && actionCancel != null && !actionCancel.IsCancellationRequested)
+            // 原生战斗的回执等待不能占住恢复通道；近战、闪避和法器都让位给可用的低血量恢复。
+            // 只取消本工具正在执行的战斗请求，不中断恢复，也不取消玩家手动激活的能力。
+            if (automatic && settings.HealEnabled && lowSamples >= 2 && healRule.Ready(hp, max, settings.Threshold, now, settings.RetrySeconds) && currentAction != null && NativeRequestRoute(currentAction) && (currentAction.CombatArtifacts || currentAction.CombatAttack || currentAction.CombatEvade || currentAction.Hotbar) && actionCancel != null && !actionCancel.IsCancellationRequested)
             {
                 bool potion;
                 if (RecoveryRule.Select(settings, cooldowns, souls, artifactCosts, out potion).Length > 0)
                 {
-                    ToolboxLog.Write("Combat.Preempted", "native artifact yields to low-health recovery");
+                    ToolboxLog.Write("Combat.Preempted", "native combat yields to low-health recovery");
                     actionCancel.Cancel();
                 }
             }
@@ -3325,11 +3328,25 @@ sealed partial class ToolboxForm : Form
                 request.Keys = ThreatRule.Select(settings, cooldowns, sample[2], artifactCosts, sample[0], sample[1]);
             }
 
-            if (request.Controller)
+            // 自动恢复始终使用当前游戏键位；工具槽位键只标识动作，不能假定玩家未改游戏绑定。
+            // 观察对象在键位转换前确定，避免映射后的键值与其他工具动作混淆。
+            bool recoveryOutput = request.Healing || request.Threat;
+            // 手柄、后台及原生模式直接请求游戏能力，不再把键盘消息冒充手柄输入。
+            if ((recoveryOutput || request.Hotbar) && NativeRequestRoute(request))
+            {
+                await RunNativeRecovery(request, cancel.Token);
+                return;
+            }
+
+            int[] recoverySlots = recoveryOutput ? request.Keys.Select(key => key == settings.PotionKey ? 3 : Array.IndexOf(settings.Slots, key)).Where(slot => slot >= 0).Distinct().ToArray() : new int[0];
+            float recoveryHealth = hp;
+            var recoveryCooldowns = (CooldownInfo[])cooldowns.Clone();
+            if (request.Controller || recoveryOutput)
             {
                 if (reader == null)
                     return;
-                request.Keys = reader.GameBindings().Route(settings, request.Keys);
+                var bindings = reader.GameBindings();
+                request.Keys = request.Controller ? bindings.Route(settings, request.Keys) : bindings.RouteKeyboard(settings, request.Keys);
             }
 
             bool background = reader != null && !ToolboxInput.Front(reader.Pid);
@@ -3357,7 +3374,10 @@ sealed partial class ToolboxForm : Form
                 healRule.Last = clock.ElapsedMilliseconds;
             if (request.Threat)
                 consumedThreats.Add(request.ThreatId);
-            await Task.Delay(background ? (request.Healing || request.Threat ? 800 : 100) : 60, cancel.Token);
+            if (recoveryOutput)
+                ObserveRecoveryOutput(reader, request.Generation, recoverySlots, recoveryHealth, recoveryCooldowns);
+            // 自动恢复按键跨越多个游戏帧；后台沿用既有保持时间，人工组合仍使用原来的短按。
+            await Task.Delay(background ? (recoveryOutput ? 800 : 100) : recoveryOutput ? 180 : 60, cancel.Token);
         }
         catch (OperationCanceledException)
         {
@@ -3382,6 +3402,41 @@ sealed partial class ToolboxForm : Form
             if (actionCancel == cancel)
                 actionCancel = null;
             cancel.Dispose();
+        }
+    }
+
+    // 独立只读观察恢复输出，不占用战斗通道、不补发按键；血量变化不单独算作药水使用成功。
+    // 消耗、冷却和回血会受玩家操作及其他恢复来源影响，不能单独判定动作结果。
+    async void ObserveRecoveryOutput(HealthReader owner, int ownerGeneration, int[] slots, float beforeHealth, CooldownInfo[] before)
+    {
+        var consumed = new HashSet<int>();
+        var cooling = new HashSet<int>();
+        float highestHealth = beforeHealth, afterHealth = beforeHealth;
+        try
+        {
+            for (int sample = 0; sample < 12; sample++)
+            {
+                await Task.Delay(100);
+                if (closing || reader != owner || generation != ownerGeneration || !readGate.Ready)
+                    return;
+                afterHealth = owner.Snapshot()[0];
+                highestHealth = Math.Max(highestHealth, afterHealth);
+                foreach (int slot in slots)
+                {
+                    var current = owner.Cooldown(slot);
+                    if (before[slot].Known && current.Known && !float.IsNaN(before[slot].Charges) && !float.IsNaN(current.Charges) && current.Charges < before[slot].Charges)
+                        consumed.Add(slot + 1);
+                    if (before[slot].Known && current.Known && !before[slot].Cooling && current.Cooling)
+                        cooling.Add(slot + 1);
+                }
+            }
+
+            ToolboxLog.Write("Recovery.Observed", "slots=" + String.Join(",", slots.Select(slot => slot + 1)) + " chargeConsumed=" + String.Join(",", consumed.OrderBy(slot => slot)) + " cooldownStarted=" + String.Join(",", cooling.OrderBy(slot => slot)) + " hpBefore=" + Metric(beforeHealth) + " hpAfter=" + Metric(afterHealth) + " hpHighest=" + Metric(highestHealth) + "; slot4=potion; observations only, request success not asserted");
+        }
+        catch (Exception error)
+        {
+            // 观察失败只记录原因；主轮询继续负责读数恢复，不能由诊断任务重复发送动作。
+            ToolboxLog.Error("Recovery.ObservationError", error);
         }
     }
 

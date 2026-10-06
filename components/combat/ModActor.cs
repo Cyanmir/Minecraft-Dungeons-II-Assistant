@@ -34,7 +34,10 @@ public class ModActor : AActor
     // 当前请求归属：实例、场景和序号与工具端一起匹配，换场景后旧请求不可复用。
     string instance = "", epoch = "", status = "Disabled", kind = "";
     int sequence, handle, slot;
-    bool encounter, waiting, abilityObserved, aimed, released, targetDelivered, heldObserved;
+    bool encounter, selfArtifact, waiting, abilityObserved, aimed, released, targetDelivered, heldObserved;
+    // 药水只观察原生充能消耗，不直接改血量或冷却。
+    float potionBefore;
+    double lastPotion = -10000;
     double holdSeconds, startedAt, releaseAt;
     int heldHandle;
     string artifactType = "", requestIdentity = "";
@@ -79,7 +82,7 @@ public class ModActor : AActor
         var r = UGameplayStatics.CreateSaveGameObject(Unreal.ClassOf<Receipt>()) as Receipt;
         if (r == null)
             return;
-        r.Status = "4|" + instance + "|" + epoch + "|" + sequence + "|" + status + "|" + World.RealTime(this);
+        r.Status = "5|" + instance + "|" + epoch + "|" + sequence + "|" + status + "|" + World.RealTime(this);
         UGameplayStatics.SaveGameToSlot(r, "MCD2CombatReceipt", 0);
     }
 
@@ -176,11 +179,15 @@ public class ModActor : AActor
         var playerASC = USWAbilitySystemComponent.GetASC(p);
         if (!Valid(playerASC) || playerASC.GetGameplayTagCount(G("SW.State.Life.Alive")) <= 0 || playerASC.GetGameplayTagCount(G("SW.State.Stunned")) > 0)
             return false;
-        if (!Valid(pendingTarget) || pendingTarget.IsActorBeingDestroyed() || pendingTarget.bHidden || !pendingTarget.IsHostileTowards(p) || !pendingTarget.IsTargetable())
-            return false;
-        var a = USWAbilitySystemComponent.GetASC(pendingTarget);
-        if (!Valid(a) || a.GetGameplayTagCount(G("SW.State.Life.Alive")) <= 0 || !Near(p.K2_GetActorLocation(), pendingTarget.K2_GetActorLocation(), 800, 250) || !c.LineOfSightTo(pendingTarget, p.K2_GetActorLocation(), true))
-            return false;
+        if (!selfArtifact)
+        {
+            if (!Valid(pendingTarget) || pendingTarget.IsActorBeingDestroyed() || pendingTarget.bHidden || !pendingTarget.IsHostileTowards(p) || !pendingTarget.IsTargetable())
+                return false;
+            var a = USWAbilitySystemComponent.GetASC(pendingTarget);
+            if (!Valid(a) || a.GetGameplayTagCount(G("SW.State.Life.Alive")) <= 0 || !Near(p.K2_GetActorLocation(), pendingTarget.K2_GetActorLocation(), 800, 250) || !c.LineOfSightTo(pendingTarget, p.K2_GetActorLocation(), true))
+                return false;
+        }
+
         var equipped = UInventoryHelperLibrary.GetEquippedItemsInSlot(p, G("SW.ItemSlot.Equipment.Artifact.Slot" + slot));
         return equipped.Count == 1 && equipped[0].ItemData.SessionUID.UID == artifactUID.UID && Tag(equipped[0].ItemData.TypeTag) == artifactType;
     }
@@ -251,7 +258,7 @@ public class ModActor : AActor
                 status = heldObserved ? "Holding" : "Dispatched";
         }
 
-        if ((holdSeconds > 0 || aimed) && !released)
+        if (!selfArtifact && (holdSeconds > 0 || aimed) && !released)
         {
             var here = pendingPlayer.K2_GetActorLocation();
             var there = pendingTarget.K2_GetActorLocation();
@@ -289,7 +296,7 @@ public class ModActor : AActor
         {
             if (!Valid(s.Definition))
                 continue;
-            bool match = kind == "melee" ? s.Definition.AbilityClass == Unreal.ClassOf<UGA_PlayerMeleeAttack>() : Tag(s.Definition.Definition.AbilityCallsign) == callsign && (kind == "roll" ? s.Definition.AbilityClass == Unreal.ClassOf<UGA_Roll>() : s.Definition.AbilityClass == Unreal.ClassOf<UGA_Artifact>());
+            bool match = kind == "melee" ? s.Definition.AbilityClass == Unreal.ClassOf<UGA_PlayerMeleeAttack>() : Tag(s.Definition.Definition.AbilityCallsign) == callsign && (kind == "roll" ? s.Definition.AbilityClass == Unreal.ClassOf<UGA_Roll>() : kind == "potion" ? s.Definition.AbilityClass == Unreal.ClassOf<UGA_HealthPotion>() : s.Definition.AbilityClass == Unreal.ClassOf<UGA_Artifact>());
             if (match)
             {
                 h = s.Handle;
@@ -469,7 +476,7 @@ public class ModActor : AActor
         }
 
         var f = UKismetStringLibrary.ParseIntoArray(command, "|", false);
-        if (f.Count != 20 || f[0] != "4" || f[1] != instance || f[2].Length != 32)
+        if (f.Count != 20 || f[0] != "5" || f[1] != instance || f[2].Length != 32)
         {
             Abort("InvalidRequest");
             Write();
@@ -533,6 +540,15 @@ public class ModActor : AActor
                             status = "RollObserved";
                         }
                     }
+                    else if (kind == "potion")
+                    {
+                        // 瞬时能力会跳过 ActiveCount 观察窗口；以充能减少确认药水消耗。
+                        if (a.GetGameplayAttributeCurrentValue(Unreal.ClassOf<UATR_Health>(), "HealthPotionCharges") < potionBefore)
+                        {
+                            EndTask();
+                            status = "PotionConsumed";
+                        }
+                    }
                     else if (kind == "artifact" && (holdSeconds > 0 || aimed))
                     {
                         bool parentActive = false, childActive = false;
@@ -587,7 +603,8 @@ public class ModActor : AActor
         epoch = f[2];
         sequence = next;
         encounter = f[4] == "encounter";
-        kind = encounter ? "melee" : f[4];
+        selfArtifact = f[4] == "selfartifact";
+        kind = encounter ? "melee" : selfArtifact ? "artifact" : f[4];
         slot = requestedSlot;
         abilityObserved = false;
         heldObserved = false;
@@ -598,7 +615,7 @@ public class ModActor : AActor
         heldHandle = 0;
         releaseAt = 0;
         requestIdentity = Identity(f);
-        if (kind != "melee" && kind != "artifact" && kind != "roll")
+        if (kind != "melee" && kind != "artifact" && kind != "roll" && kind != "potion")
         {
             status = "InvalidKind";
             Write();
@@ -633,14 +650,14 @@ public class ModActor : AActor
             return;
         }
 
-        if (!Near(here, expected, encounter ? 200 : kind == "artifact" ? 100 : 3, encounter || kind == "artifact" ? 30 : 3))
+        if (!Near(here, expected, encounter ? 200 : kind == "artifact" || kind == "potion" ? 100 : 3, encounter || kind == "artifact" || kind == "potion" ? 30 : 3))
         {
             status = "PlayerPositionChanged";
             Write();
             return;
         }
 
-        if (!(range >= 80 && range <= 2500) || !(dx * dx + dy * dy >= .999 && dx * dx + dy * dy <= 1.001))
+        if (!(kind == "potion" ? range >= 1 && range <= 99 : range >= 80 && range <= 2500) || !(dx * dx + dy * dy >= .999 && dx * dx + dy * dy <= 1.001) || (kind == "potion" || selfArtifact) && (f[6] != "-" || f[7] != "-" || !Near(expected, there, .01, .01)) || kind != "artifact" && slot != 0)
         {
             status = "InvalidDirectionOrRange";
             Write();
@@ -649,7 +666,7 @@ public class ModActor : AActor
 
         var aPlayer = USWAbilitySystemComponent.GetASC(p);
         AActor target = null;
-        if (kind != "roll")
+        if (kind != "roll" && kind != "potion" && !selfArtifact)
         {
             int matches = 0;
             foreach (var actor in World.FindAll(this, Unreal.ClassOf<AMobCharacter>()))
@@ -689,7 +706,8 @@ public class ModActor : AActor
         }
 
         FGameplayAbilitySpecHandle ability;
-        string callsign = kind == "artifact" ? "SW.AbilityCallsign.Artifact" + slot : "SW.AbilityCallsign.ForwardRoll";
+        // 名称与类来自本体 DT_PlayerDefinition 的能力定义，不使用固定地址或伪造预测键。
+        string callsign = kind == "artifact" ? "SW.AbilityCallsign.Artifact" + slot : kind == "potion" ? "SW.AbilityCallsign.HealthPotion" : "SW.AbilityCallsign.ForwardRoll";
         if (!Ability(p, callsign, out ability))
         {
             status = "AbilityUnavailable";
@@ -763,6 +781,14 @@ public class ModActor : AActor
                     return;
                 }
 
+                // 自身恢复只接受本体明确不需要瞄准的法器，瞄准型仍须有有效敌对目标。
+                if (selfArtifact && aimed)
+                {
+                    status = "SelfTargetUnsupported";
+                    Write();
+                    return;
+                }
+
                 // 持续时长依据原生最大蓄力期限限幅；成本、蓄力层级与耗尽由游戏处理。
                 if (charging)
                 {
@@ -797,9 +823,21 @@ public class ModActor : AActor
                     return;
                 }
 
-                if ((aimed || holdSeconds > 0) && !c.LineOfSightTo(target, here, true))
+                if (!selfArtifact && (aimed || holdSeconds > 0) && !c.LineOfSightTo(target, here, true))
                 {
                     status = "AimObstructed";
+                    Write();
+                    return;
+                }
+            }
+            else if (kind == "potion")
+            {
+                double health = aPlayer.GetGameplayAttributeCurrentValue(Unreal.ClassOf<UATR_Health>(), "Health"), maximum = aPlayer.GetGameplayAttributeCurrentValue(Unreal.ClassOf<UATR_Health>(), "HealthMax");
+                potionBefore = aPlayer.GetGameplayAttributeCurrentValue(Unreal.ClassOf<UATR_Health>(), "HealthPotionCharges");
+                // 请求发出后重新核对血量与充能；冷却、消耗和回血由 GA_HealthPotion 校验并结算。
+                if (!(health > 0 && maximum > 0 && health < maximum * range / 100 && potionBefore >= 1))
+                {
+                    status = "PotionUnavailable";
                     Write();
                     return;
                 }
@@ -826,7 +864,7 @@ public class ModActor : AActor
             return;
         }
 
-        double last = kind == "melee" ? lastMelee : kind == "artifact" ? lastArtifact : lastRoll;
+        double last = kind == "melee" ? lastMelee : kind == "artifact" ? lastArtifact : kind == "potion" ? lastPotion : lastRoll;
         if (now - last < (kind == "melee" ? .35 : kind == "artifact" ? .25 : .8))
         {
             status = "Throttled";
@@ -838,15 +876,17 @@ public class ModActor : AActor
             lastMelee = now;
         else if (kind == "artifact")
             lastArtifact = now;
+        else if (kind == "potion")
+            lastPotion = now;
         else
             lastRoll = now;
         var data = new FGameplayEventData
         {
             Instigator = p,
-            Target = target,
+            Target = kind == "potion" || selfArtifact ? p : target,
             EventTag = eventTag
         };
-        var direction = kind == "roll" ? new FVector
+        var direction = kind == "potion" || selfArtifact ? here : kind == "roll" ? new FVector
         {
             X = here.X + dx * 300,
             Y = here.Y + dy * 300,
@@ -859,6 +899,8 @@ public class ModActor : AActor
         rot.Roll = 0;
         if (kind == "melee")
             data.TargetData = UAbilitySystemBlueprintLibrary.AbilityTargetDataFromActor(target);
+        else if (kind == "potion" || selfArtifact)
+            data.TargetData = UAbilitySystemBlueprintLibrary.AbilityTargetDataFromActor(p);
         else if (kind == "artifact")
             data.TargetData = TargetData(p, target as AMobCharacter);
         else
@@ -872,7 +914,9 @@ public class ModActor : AActor
             }
         }
 
-        c.SetControlRotation(rot);
+        // 自身恢复不改变玩家或控制器朝向，更不移动鼠标和角色。
+        if (kind != "potion" && !selfArtifact)
+            c.SetControlRotation(rot);
         playerBefore = here;
         rollDirection = new FVector
         {
@@ -886,7 +930,7 @@ public class ModActor : AActor
         pendingTarget = target as AMobCharacter;
         waiting = true;
         startedAt = now;
-        deadline = now + (kind == "artifact" && (holdSeconds > 0 || aimed) ? 9 : .6);
+        deadline = now + (kind == "artifact" && (holdSeconds > 0 || aimed) ? 9 : kind == "potion" ? 1.2 : .6);
         if (kind == "melee")
             UAbilitySystemBlueprintLibrary.SendGameplayEventToActor(p, eventTag, data);
         else

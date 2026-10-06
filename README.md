@@ -4,9 +4,9 @@
 
 # Minecraft Dungeons II Assistant
 
-**MCD2A · Minecraft Dungeons II 游戏助手 · 1.1.0**
+**MCD2A · Minecraft Dungeons II 游戏助手 · 1.1.1**
 
-[![Version](https://img.shields.io/badge/version-1.1.0-4bb5c5)](https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant/releases/tag/1.1.0)
+[![Version](https://img.shields.io/badge/version-1.1.1-4bb5c5)](https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant/releases/tag/1.1.1)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078d4)](#系统要求)
 [![License](https://img.shields.io/badge/license-MIT-6b8e9e)](LICENSE)
 

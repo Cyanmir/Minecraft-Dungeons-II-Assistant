@@ -251,12 +251,24 @@ sealed class GameActionBindings
     // 把选中的槽位操作路由到游戏已读取的键位，拒绝缺失绑定及组合键冲突。
     public int[] Route(ToolboxSettings settings, int[] keys)
     {
+        return RouteKeys(settings, keys, true);
+    }
+
+    // 自动恢复的键鼠路径也读取当前游戏键位，不要求已知手柄绑定。
+    public int[] RouteKeyboard(ToolboxSettings settings, int[] keys)
+    {
+        return RouteKeys(settings, keys, false);
+    }
+
+    // 两种路由共用动作身份、缺失绑定和触发键冲突检查。
+    int[] RouteKeys(ToolboxSettings settings, int[] keys, bool controller)
+    {
         var result = new List<int>();
         foreach (int key in keys)
         {
             int slot = Array.IndexOf(settings.Slots, key);
             int action = slot >= 0 ? slot : key == settings.PotionKey ? 3 : -1;
-            if (action < 0 || Keyboard[action] == 0 || Gamepad[action] == 0)
+            if (action < 0 || Keyboard[action] == 0 || controller && Gamepad[action] == 0)
                 throw new Exception("游戏手柄键位未读取，请检查游戏内绑定。");
             int mapped = Keyboard[action];
             if ((settings.ComboEnabled && mapped == settings.ComboTrigger) || (settings.JumpEnabled && mapped == settings.JumpTrigger))

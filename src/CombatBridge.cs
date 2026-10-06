@@ -16,6 +16,23 @@ using System.Web.Script.Serialization;
 static class NativeCombatCatalog
 {
     static readonly HashSet<string> allowed = Load();
+    // 根据已拆包的原生特性选择不需要敌人瞄准的法器；不能把瞄准型法器对着玩家激活。
+    static readonly HashSet<string> selfAllowed = LoadSelf();
+    static HashSet<string> LoadSelf()
+    {
+        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("native-combat-artifacts.json"))
+        using (var reader = new StreamReader(stream))
+        {
+            var root = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
+            return new HashSet<string>(((System.Collections.IEnumerable)root["lifecycles"]).Cast<Dictionary<string, object>>().Where(row => !(bool)row["targeting"] && allowed.Contains((string)row["type"])).Select(row => (string)row["type"]), StringComparer.Ordinal);
+        }
+    }
+
+    public static bool SupportsSelf(string type)
+    {
+        return selfAllowed.Contains(type);
+    }
+
     static HashSet<string> Load()
     {
         using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("native-combat-artifacts.json"))
@@ -76,7 +93,7 @@ sealed class CombatBridge
     int sequence;
     public CombatBridge(int pid)
     {
-        channel = new NativeBridgeChannel(pid, Mod, "4", Parse);
+        channel = new NativeBridgeChannel(pid, Mod, "5", Parse);
         instance = channel.Instance;
     }
 
@@ -91,9 +108,9 @@ sealed class CombatBridge
         string[] p = value.Split('|');
         int n;
         double clock;
-        if (p.Length == 6 && p[0] != "4")
+        if (p.Length == 6 && p[0] != "5")
             throw new Exception(L10n.T("原生战斗组件需要更新，请退出游戏后重新安装组件"));
-        if (p.Length != 6 || p[0] != "4" || String.IsNullOrEmpty(p[1]) || !Int32.TryParse(p[3], out n) || n < 0 || !Double.TryParse(p[5], NumberStyles.Float, CultureInfo.InvariantCulture, out clock) || Double.IsNaN(clock) || Double.IsInfinity(clock) || clock < 0)
+        if (p.Length != 6 || p[0] != "5" || String.IsNullOrEmpty(p[1]) || !Int32.TryParse(p[3], out n) || n < 0 || !Double.TryParse(p[5], NumberStyles.Float, CultureInfo.InvariantCulture, out clock) || Double.IsNaN(clock) || Double.IsInfinity(clock) || clock < 0)
             throw new Exception("Invalid native combat receipt");
         return new NearbyLootReceipt
         {
@@ -113,14 +130,17 @@ sealed class CombatBridge
         return v;
     }
 
-    // 构造协议 4 战斗命令，携带真实玩家/目标与动作生命周期信息。
+    // 构造协议 5 战斗命令，携带真实玩家/目标与动作生命周期信息。
     public static string Command(NearbyLootReceipt r, string epoch, int n, string kind, CombatState state, CombatTarget target, int slot, ThreatVector direction, double range, bool dry)
     {
-        if (r == null || epoch == null || epoch.Length != 32 || n <= 0 || state == null || !state.CanAttempt || !state.Player.Valid || !direction.Valid || Math.Abs(direction.Z) > .00001 || Math.Abs(direction.Length - 1) > .00001 || Double.IsNaN(range) || Double.IsInfinity(range) || range < 80 || range > 2500 || kind != "melee" && kind != "encounter" && kind != "artifact" && kind != "roll" || kind == "artifact" && (slot < 1 || slot > 3) || kind != "artifact" && slot != 0 || kind != "roll" && (target == null || !target.Position.Valid))
+        bool self = kind == "potion" || kind == "selfartifact" || kind == "roll";
+        bool artifact = kind == "artifact" || kind == "selfartifact";
+        // 药水的 range 字段专用于血量百分比阈值，其他动作仍表示范围；固定字段宽度保持不变。
+        if (r == null || epoch == null || epoch.Length != 32 || n <= 0 || state == null || !state.CanAttempt || !state.Player.Valid || !direction.Valid || Math.Abs(direction.Z) > .00001 || Math.Abs(direction.Length - 1) > .00001 || Double.IsNaN(range) || Double.IsInfinity(range) || (kind == "potion" ? range < 1 || range > 99 : range < 80 || range > 2500) || kind != "melee" && kind != "encounter" && kind != "artifact" && kind != "selfartifact" && kind != "potion" && kind != "roll" || artifact && (slot < 1 || slot > 3) || !artifact && slot != 0 || !self && (target == null || !target.Position.Valid) || self && target != null)
             throw new Exception("Invalid native combat command");
         var t = target == null ? state.Player : target.Position;
         Func<double, string> number = v => v.ToString("R", CultureInfo.InvariantCulture);
-        return String.Join("|", new[] { "4", Field(r.Instance), Field(epoch), n.ToString(CultureInfo.InvariantCulture), kind, Field(state.PawnName), kind == "roll" ? "-" : Field(target.ActorName), kind == "roll" ? "-" : Field(target.Type), dry ? "1" : "0", slot.ToString(CultureInfo.InvariantCulture), number(state.Player.X), number(state.Player.Y), number(state.Player.Z), number(t.X), number(t.Y), number(t.Z), number(direction.X), number(direction.Y), number(range), number(r.Clock + .25) });
+        return String.Join("|", new[] { "5", Field(r.Instance), Field(epoch), n.ToString(CultureInfo.InvariantCulture), kind, Field(state.PawnName), self ? "-" : Field(target.ActorName), self ? "-" : Field(target.Type), dry ? "1" : "0", slot.ToString(CultureInfo.InvariantCulture), number(state.Player.X), number(state.Player.Y), number(state.Player.Z), number(t.X), number(t.Y), number(t.Z), number(direction.X), number(direction.Y), number(range), number(r.Clock + .25) });
     }
 
     // 发送一次原生攻击、法器或闪避请求，建立对应序号归属。
@@ -145,7 +165,7 @@ sealed class CombatBridge
         var f = command.Split('|');
         int n;
         double expiry;
-        if (f.Length != 20 || f[0] != "4" || f[1] != receipt.Instance || f[2] != receipt.Epoch || !Int32.TryParse(f[3], out n) || n != receipt.Sequence || n <= 0 || !Double.TryParse(f[19], NumberStyles.Float, CultureInfo.InvariantCulture, out expiry) || Double.IsNaN(expiry) || Double.IsInfinity(expiry) || receipt.Clock > expiry || receipt.Clock + .25 < expiry)
+        if (f.Length != 20 || f[0] != "5" || f[1] != receipt.Instance || f[2] != receipt.Epoch || !Int32.TryParse(f[3], out n) || n != receipt.Sequence || n <= 0 || !Double.TryParse(f[19], NumberStyles.Float, CultureInfo.InvariantCulture, out expiry) || Double.IsNaN(expiry) || Double.IsInfinity(expiry) || receipt.Clock > expiry || receipt.Clock + .25 < expiry)
             throw new Exception("Expired or mismatched native combat renewal");
         f[19] = (receipt.Clock + .25).ToString("R", CultureInfo.InvariantCulture);
         return String.Join("|", f);
@@ -191,6 +211,12 @@ sealed partial class ToolboxForm
     CheckBox combatNativeEnabled;
     PixelLabel nativeCombatNote;
     CombatBridge combatNativeBridge;
+    // 手柄恢复始终走组件；其他请求仍按用户原生模式和前后台作用域决定。
+    bool NativeRequestRoute(InputRequest request)
+    {
+        return UseNativeCombat || request.Controller && (request.Healing || request.Threat || request.Hotbar);
+    }
+
     void StopNativeCombat()
     {
         var bridge = combatNativeBridge;
@@ -205,20 +231,20 @@ sealed partial class ToolboxForm
         bool sent = false;
         try
         {
-            if (!UseNativeCombat || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires)
+            if (!NativeRequestRoute(request) || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires)
                 return;
             if (combatNativeBridge == null)
                 combatNativeBridge = new CombatBridge(reader.Pid);
             var bridge = combatNativeBridge;
-            if (!UseNativeCombat || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires)
+            if (!NativeRequestRoute(request) || !Active(request) || cancel.IsCancellationRequested || request.Generation != generation || clock.ElapsedMilliseconds > request.Expires)
                 return;
             bridge.Dispatch(kind, state, target, slot, direction, range);
             sent = true;
             if (kind == "melee" || kind == "encounter")
                 lastCombatAttack = clock.ElapsedMilliseconds;
-            else if (kind == "artifact")
+            else if (kind == "artifact" || kind == "selfartifact")
                 lastCombatArtifact = clock.ElapsedMilliseconds;
-            else
+            else if (kind == "roll")
             {
                 lastEvade = clock.ElapsedMilliseconds;
                 evadedThreats.Add(request.ThreatId);
@@ -226,12 +252,19 @@ sealed partial class ToolboxForm
 
             ToolboxLog.Write("Combat.NativeRequest", "kind=" + kind + " target=" + (target == null ? "-" : target.Id) + " slot=" + slot + "; native granted ability; no cursor/key input or path");
             nativeCombatNote.Text = L10n.T("已请求原生战斗动作，等待游戏结果");
-            long deadline = clock.ElapsedMilliseconds + (kind == "artifact" ? 9500 : 1000), heartbeat = 0;
+            if (request.Healing || request.Threat)
+            {
+                healRule.Last = clock.ElapsedMilliseconds;
+                if (request.Threat)
+                    consumedThreats.Add(request.ThreatId);
+            }
+
+            long deadline = clock.ElapsedMilliseconds + (kind == "artifact" || kind == "selfartifact" ? 9500 : kind == "potion" ? 1600 : 1000), heartbeat = 0;
             string phase = null;
             while (clock.ElapsedMilliseconds < deadline)
             {
                 await Task.Delay(40, cancel);
-                if (!Active(request) || request.Generation != generation || !UseNativeCombat)
+                if (!Active(request) || request.Generation != generation || !NativeRequestRoute(request))
                 {
                     bridge.Stop();
                     return;
@@ -249,7 +282,7 @@ sealed partial class ToolboxForm
                         nativeCombatNote.Text = L10n.T(phase == "Holding" ? "法器蓄力／引导中；F9 可中止" : phase == "ReleaseRequested" ? "已请求法器释放，等待原生结束" : phase == "TargetSubmitted" ? "已提交原生瞄准目标，等待游戏结果" : "已请求原生战斗动作，等待游戏结果");
                     }
 
-                    if (kind == "artifact" && clock.ElapsedMilliseconds - heartbeat >= 80)
+                    if ((kind == "artifact" || kind == "selfartifact") && clock.ElapsedMilliseconds - heartbeat >= 80)
                     {
                         bridge.KeepAlive(r);
                         heartbeat = clock.ElapsedMilliseconds;
@@ -258,8 +291,9 @@ sealed partial class ToolboxForm
                     continue;
                 }
 
-                nativeCombatNote.Text = L10n.T(r.Status == "ArtifactLifecycleEnded" ? "法器流程已结束" : r.Status == "AbilityObserved" ? "已观察到原生能力激活；伤害由游戏结算" : r.Status == "RollObserved" ? "已观察到闪避消耗充能并沿请求方向移动" : "原生动作未确认，查看诊断日志");
-                ToolboxLog.Write("Combat.NativeResult", "kind=" + kind + " status=" + r.Status + "; activation/lifecycle evidence only; damage/hit not asserted");
+                // 药水结果仅确认充能消耗；实际回血仍由独立读数观察，不把请求发送当作成功。
+                nativeCombatNote.Text = L10n.T(r.Status == "PotionConsumed" ? "已观察到药水充能消耗；回血由游戏结算" : r.Status == "ArtifactLifecycleEnded" ? "法器流程已结束" : r.Status == "AbilityObserved" ? "已观察到原生能力激活；伤害由游戏结算" : r.Status == "RollObserved" ? "已观察到闪避消耗充能并沿请求方向移动" : "原生动作未确认，查看诊断日志");
+                ToolboxLog.Write("Combat.NativeResult", "kind=" + kind + " status=" + r.Status + "; activation/lifecycle/consumption evidence only; damage/healing not asserted");
                 return;
             }
 
@@ -280,6 +314,93 @@ sealed partial class ToolboxForm
             if (sent && combatNativeBridge != null)
                 combatNativeBridge.Stop();
         }
+    }
+
+    // 原生恢复使用真实药水能力及已勾选法器，逐槽重读血量、冷却、灵魂和装备，绝不直接改资源。
+    async Task RunNativeRecovery(InputRequest request, CancellationToken cancel)
+    {
+        var owner = reader;
+        int[] actions = request.Keys.Select(key => key == settings.PotionKey ? 3 : Array.IndexOf(settings.Slots, key)).Where(slot => slot >= 0).Distinct().OrderBy(slot => slot == 3 ? -1 : slot).ToArray();
+        float beforeHealth = hp;
+        var before = (CooldownInfo[])cooldowns.Clone();
+        var observed = new List<int>();
+        foreach (int action in actions)
+        {
+            if (!Active(request) || reader != owner || request.Generation != generation || cancel.IsCancellationRequested || (request.Hotbar ? !settings.ComboEnabled : !settings.HealEnabled))
+                break;
+            var sample = reader.Snapshot();
+            // Last 是整个恢复请求的重试节流，不能阻断同一请求内后续已选槽位；血量资格仍逐槽重查。
+            if (request.Healing && !(sample[0] > 0 && sample[1] > 0 && sample[0] < sample[1] * settings.Threshold / 100f))
+                break;
+            UpdateArtifact();
+            UpdateCooldowns();
+            bool potion;
+            int[] eligible;
+            if (request.Hotbar)
+            {
+                // 人工组合使用 ComboSlots，不借用自动恢复的 AutoSlots；成本逐槽读取，空自动选择不阻断组合。
+                eligible = settings.ComboKeys();
+                if (action == 3 || !settings.ComboSlots[action] || !cooldowns[action].Ready)
+                    continue;
+                float cost = reader.Artifact(action).Cost;
+                if (float.IsNaN(cost) || float.IsInfinity(cost) || cost < 0 || !(sample[2] >= cost))
+                    continue;
+            }
+            else if (request.Threat)
+            {
+                if (!settings.ThreatEnabled)
+                    break;
+                var threats = reader.Threats(clock.ElapsedMilliseconds);
+                if (!threats.Known || !threats.Threats.Any(threat => threat.Id == request.ThreatId))
+                    break;
+                eligible = ThreatRule.Select(settings, cooldowns, sample[2], artifactCosts, sample[0], sample[1]);
+            }
+            else
+                eligible = RecoveryRule.Select(settings, cooldowns, sample[2], artifactCosts, out potion);
+            if (!eligible.Contains(action == 3 ? settings.PotionKey : settings.Slots[action]))
+                continue;
+            string type = null;
+            if (action != 3)
+            {
+                var equipped = reader.ReadInventory().Where(row => Convert.ToString(row["EquippedSlot"], CultureInfo.InvariantCulture) == "SW.ItemSlot.Equipment.Artifact.Slot" + (action + 1) || Convert.ToString(row["Container"], CultureInfo.InvariantCulture) == "SW.ItemSlot.Equipment.Artifact.Slot" + (action + 1)).ToArray();
+                if (equipped.Length != 1)
+                    continue;
+                type = Convert.ToString(((Dictionary<string, object>)equipped[0]["ItemData"])["TypeTag"], CultureInfo.InvariantCulture);
+                if (!NativeCombatCatalog.Supports(type))
+                {
+                    ToolboxLog.Limited("Recovery.NativeBlocked", "artifact lifecycle not adapted: " + type);
+                    continue;
+                }
+            }
+
+            // 在背包与遥测读取之后采集场景，避免用旧玩家坐标派发恢复请求。
+            var state = reader.ReadCombatState();
+            if (!state.CanAttempt)
+            {
+                ToolboxLog.Limited("Recovery.NativeBlocked", "player or gameplay UI unavailable");
+                break;
+            }
+
+            var target = action == 3 || NativeCombatCatalog.SupportsSelf(type) ? null : NativeCombatRule.ArtifactTarget(state, true);
+            if (action != 3 && !NativeCombatCatalog.SupportsSelf(type) && target == null)
+            {
+                ToolboxLog.Limited("Recovery.NativeBlocked", "aimed artifact requires eligible enemy: " + type);
+                continue;
+            }
+
+            var direction = target == null ? new ThreatVector(1, 0, 0) : new ThreatVector(target.Position.X - state.Player.X, target.Position.Y - state.Player.Y, 0);
+            if (direction.Length < 1)
+                continue;
+            // 每个后续槽位有独立的新鲜快照与短派发期限，不能续用前一个槽位的旧坐标。
+            request.Expires = clock.ElapsedMilliseconds + 1200;
+            observed.Add(action);
+            await NativeCombatAction(request, state, action == 3 ? "potion" : target == null ? "selfartifact" : "artifact", target, action == 3 ? 0 : action + 1, direction * (1 / direction.Length), action == 3 ? settings.Threshold : 800, cancel);
+            if (action == 3)
+                break;
+        }
+
+        if (observed.Count > 0)
+            ObserveRecoveryOutput(owner, request.Generation, observed.ToArray(), beforeHealth, before);
     }
 
     // 执行一次已筛选目标的原生近战，不模拟鼠标点击。

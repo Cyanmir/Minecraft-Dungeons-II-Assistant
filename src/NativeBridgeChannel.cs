@@ -54,8 +54,8 @@ static class NativeMailboxCodec
         string expiry = (clock + 1).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
         if (protocol == "6")
             return "6|" + instance + "|" + epoch + "|1|probe|-|-|-|0|0|0|" + expiry + "|1|0|500|1000";
-        if (protocol == "4")
-            return String.Join("|", new[] { "4", instance, epoch, "1", "probe", "-", "-", "-", "1", "0", "0", "0", "0", "0", "0", "0", "1", "0", "80", expiry });
+        if (protocol == "5")
+            return String.Join("|", new[] { "5", instance, epoch, "1", "probe", "-", "-", "-", "1", "0", "0", "0", "0", "0", "0", "0", "1", "0", "80", expiry });
         throw new Exception("Unsupported native transport probe");
     }
 }
@@ -135,7 +135,7 @@ sealed class NativeBridgeChannel
 
     public NativeBridgeChannel(int pid, string component, string version, Func<string, NearbyLootReceipt> parser)
     {
-        if (component == "MCD2CombatBridge" ? version != "4" : component == "MCD2NearbyLootBridge" ? version != "6" : true)
+        if (component == "MCD2CombatBridge" ? version != "5" : component == "MCD2NearbyLootBridge" ? version != "6" : true)
             throw new Exception("Unknown native mailbox protocol");
         mod = component;
         protocol = version;
