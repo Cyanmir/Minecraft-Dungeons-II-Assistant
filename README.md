@@ -61,4 +61,5 @@ Windows x64，支持 Steam / Win64 和 Xbox PC / Microsoft Store / WinGDK。
 | --- | --- |
 | [Cyanmir](https://github.com/Cyanmir) | 项目维护与功能开发 |
 | [3035936740](https://github.com/3035936740) | 测试与反馈 |
+| [Jackdwh](https://github.com/Jackdwh) | Xbox PC / Microsoft Store / WinGDK 平台测试与反馈 |
 | [OpenAI Codex](https://openai.com/codex/) | AI 辅助开发、排查与文档整理 |
