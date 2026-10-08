@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 导出自动化相关的反射对象与键位。
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,10 +8,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
-    const string AutomationNames = "Food|Consumable|Carrot|Melon|Potato|Apple|Pumpkin|DataTable|CommonInput|Map|Door|Guidance|Spline|Waypoint|Boss|Copper|Inventory|Equipment|SlotEntry|Item|GameplayTag|SWSessionUID|MinimalViewInfo|CameraCacheEntry|Salvage|Sell|Loot|Pickup|Treasure|Chest|Interact|Navigation|Nav|Gear|Quest|UIAction|Widget|Viewport|Button|PathFollowing|Cinematic|Cutscene|SequencePlayer|Dialogue|Mission|LevelProgress|Dungeon|MapTravel|Objective|Rarity|Enchantment|Bookmark";
     // 枚举并核对当前已加载 UObject 身份，不信任无归属地址。
     List<Identity> AllTokens()
     {
@@ -37,7 +34,6 @@ sealed partial class HealthReader
         return tokens;
     }
 
-    // 读取完整键盘绑定表，供工具热键冲突检查。
     public Dictionary<string, string> AllKeyboardBindings()
     {
         var bindings = new Dictionary<string, string>();

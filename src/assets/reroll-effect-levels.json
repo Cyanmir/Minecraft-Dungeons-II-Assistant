@@ -1,0 +1,324 @@
+{
+  "format": 1,
+  "gameBuild": "1.1.2.0",
+  "source": "DT_EffectTemplateDefinition.json",
+  "sourceSha256": "044f45b4ee765001868c0e6d41484e200ca96ba4564ad1c322c614c592fcecdf",
+  "scope": "Numeric tiers defined by ordinary effect templates; excludes Unique",
+  "levels": {
+    "SW.Effect.AmmoCapacity": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.AnimaConduit": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.ArrowBurst": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.BeastBoss": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Chains": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Committed": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Constitution": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Cooldown": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.CriticalEdge": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.CriticalHit": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Deflect": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Desperation": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Duelist": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.EagleEye": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.ElementalProtection": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.EmeraldsIncrease": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Expand": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Finesse": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.FireFocus": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.FriendsForever": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Friendship": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.FrostFocus": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Gambler": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Hairtrigger": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.HealingFocus": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Knockback": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.LightningFocus": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Looting": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Lucky": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.MasterMarksman": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.MasterStrike": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.MultiShot": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Opportunist": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Opulence": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.PointBlank": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.PoisonFocus": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.PotionCooldown": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Power": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Precision": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.ProjectileProtection": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Protection": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.RapidStrike": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Reconstruction": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Reeling": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Regeneration": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Resilience": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.RollCooldown": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Saboteur": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.ShadowWalk": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Sharpness": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Sidestep": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Sniper": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.SoulFocus": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.SoulGatherMultiply": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.SoulMax": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.SpeedBoost": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Supercharge": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.SweepingEdge": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.SwiftSneak": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Thorns": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Vanguard": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Vestige": [
+      1,
+      2,
+      3
+    ],
+    "SW.Effect.Vivify": [
+      1,
+      2,
+      3
+    ]
+  }
+}

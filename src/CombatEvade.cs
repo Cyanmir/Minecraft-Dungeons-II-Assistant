@@ -12,7 +12,6 @@ using System.IO;
 using System.Text;
 using System.Web.Script.Serialization;
 
-// RollEligibility 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class RollEligibility
 {
     public bool Known, TagsAllow;
@@ -21,7 +20,6 @@ sealed class RollEligibility
     public string[] RequiredTags, BlockedTags;
 }
 
-// EvadePlan 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class EvadePlan
 {
     public string ThreatId, Kind;
@@ -36,13 +34,11 @@ static class EvadeGroundRule
         public NavigationPolygon Polygon;
     }
 
-    // 计算二维叉积，供方向与多边形裁剪判断。
     static double Cross(ThreatVector a, ThreatVector b)
     {
         return a.X * b.Y - a.Y * b.X;
     }
 
-    // 计算有符号面积，判断多边形绕序。
     static double SignedArea(IList<ThreatVector> polygon)
     {
         double area = 0;
@@ -274,7 +270,6 @@ static class EvadeGroundRule
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     readonly Dictionary<long, Identity> rollAbilities = new Dictionary<long, Identity>();
@@ -306,7 +301,6 @@ sealed partial class HealthReader
         return M.F(at + Prop(st, "float", 4).Offset);
     }
 
-    // 读取前滚能力、充能和阻断状态，未知时不闪避。
     RollEligibility ReadRollEligibility(Identity player, CombatReadiness readiness)
     {
         var result = new RollEligibility();
@@ -396,7 +390,6 @@ sealed partial class HealthReader
         }
     }
 
-    // 读取弹道空间范围，供闪避危险走廊检查。
     double ProjectileBoundRadius(Identity projectile)
     {
         Identity root = Token(M.Q(projectile.Address + Offset(projectile, "RootComponent", 8)));
@@ -460,7 +453,6 @@ sealed partial class ToolboxForm
         }
     }
 
-    // 检查闪避键是否与其他启用功能冲突。
     bool EvadeKeyConflict(int key)
     {
         return key == 0 || settings.ComboEnabled && key == settings.ComboTrigger || settings.JumpEnabled && key == settings.JumpTrigger;

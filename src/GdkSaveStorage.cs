@@ -24,7 +24,6 @@ static class GdkSaveStorage
         "MCD2EquipmentRequest",
         "MCD2EquipmentReceipt"
     };
-    // Entry 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     internal sealed class Entry
     {
         internal string Name;
@@ -32,7 +31,6 @@ static class GdkSaveStorage
         internal byte Revision;
     }
 
-    // Index 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     internal sealed class Index
     {
         internal uint Version;
@@ -41,14 +39,11 @@ static class GdkSaveStorage
         internal List<Entry> Entries = new List<Entry>();
     }
 
-    // Blob 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     internal sealed class Blob
     {
         internal string Name;
         internal Guid Cloud, Local;
     }
-
-    // Budget 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 
     // 规范化私有槽标识，用于索引和描述符关联。
     internal static string Slot(string name)
@@ -56,7 +51,6 @@ static class GdkSaveStorage
         return Slots.FirstOrDefault(s => String.Equals(name, s, StringComparison.Ordinal) || String.Equals(name, s + ".sav", StringComparison.Ordinal));
     }
 
-    // 检查有界文本或标识是否精确匹配，拒绝模糊候选。
     static byte[] Exact(BinaryReader reader, int count)
     {
         byte[] bytes = reader.ReadBytes(count);
@@ -166,6 +160,7 @@ static class GdkSaveStorage
         throw new Exception("Storage ancestor validation failed");
     }
 
+    // 将已验证 GUID 解析为当前容器中的文件关联。
     internal static string ResolveGuid(string parent, Guid id, string root, bool folder)
     {
         if (id == Guid.Empty)
@@ -192,5 +187,4 @@ static class GdkSaveStorage
             throw new Exception("Ambiguous storage GUID paths");
         return found.Count == 1 ? found.First() : null;
     }
-
 }

@@ -26,7 +26,6 @@ sealed class NavigationPolygon
     }
 }
 
-// NavigationCapture 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class NavigationCapture
 {
     public string Session;
@@ -118,10 +117,8 @@ static class NavigationPlanner
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
-    // 读取当前玩家附近已加载地面区域。
     Dictionary<int, string> ReadPlayerGroundAreas(Identity nav)
     {
         long st = Struct("SupportedAreaData", 32), h = nav.Address + Offset(nav, "SupportedAreas", 16), data = M.Q(h);
@@ -204,6 +201,7 @@ sealed partial class HealthReader
         return Pid + ":" + pawn.Index + ":" + pawn.Serial + ":" + level.Index + ":" + level.Serial;
     }
 
+    // 只读构造已验证地面多边形快照。
     public NavigationCapture ReadNavigation(bool requirePlayerAgreement = true)
     {
         Identity pawn = Pawn(), level = Token(M.Q(pawn.Address + 32)), world = Token(M.Q(level.Address + Offset(level, "OwningWorld", 8))), system = Token(M.Q(world.Address + Offset(world, "NavigationSystem", 8))), actor = Token(M.Q(system.Address + Offset(system, "MainNavData", 8)));

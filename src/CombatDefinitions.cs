@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 读取 combat-catalog.json 中的敌人/动画定义并计算攻击窗口。
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +9,6 @@ using System.Web.Script.Serialization;
 
 #pragma warning disable 0649 // 目录字段由反序列化填充，因此屏蔽编译器的未赋值字段提示。
 
-// CombatDamageWindow 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatDamageWindow
 {
     public int Index;
@@ -20,14 +18,12 @@ sealed class CombatDamageWindow
     public bool FullyParsed;
 }
 
-// CombatSection 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatSection
 {
     public string Name;
     public double Start;
 }
 
-// CombatMotion 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatMotion
 {
     public string Name;
@@ -36,7 +32,6 @@ sealed class CombatMotion
     public CombatSection[] Sections;
 }
 
-// CombatProfile 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatProfile
 {
     public string Id, TypeTag, Name, Category, ActorClass;
@@ -47,12 +42,12 @@ sealed class CombatCatalogData
 {
     public int Format;
     public string GameSha256;
+    public string[] CompatibleGameSha256;
     public CombatProfile[] Profiles;
     public CombatMotion[] Montages;
 }
 
 #pragma warning restore 0649
-// CombatObservation 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatObservation
 {
     public string ActorId, Profile, TypeTag, Montage, Status;
@@ -68,7 +63,6 @@ sealed class CombatObservation
     public CombatDamageWindow[] EventWindows;
 }
 
-// CombatForecast 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatForecast
 {
     public int Event;
@@ -94,6 +88,8 @@ static class CombatDefinitions
                 }.Deserialize<CombatCatalogData>(reader.ReadToEnd());
                 if (result.Format != 1 || result.Profiles == null || result.Montages == null || result.GameSha256 == null || result.GameSha256.Length != 64)
                     throw new Exception("Invalid combat catalog");
+                if (result.CompatibleGameSha256 != null && result.CompatibleGameSha256.Any(hash => !GameBuildCompatibility.MatchesSteam(hash)))
+                    throw new Exception("Unreviewed combat catalog game build");
                 if (result.Profiles.Select(p => p.TypeTag).Distinct().Count() != result.Profiles.Length || result.Montages.Select(m => m.Name.ToLowerInvariant()).Distinct().Count() != result.Montages.Length)
                     throw new Exception("Ambiguous combat catalog");
                 foreach (var m in result.Montages)
@@ -116,13 +112,14 @@ static class CombatDefinitions
         return !Double.IsNaN(x) && !Double.IsInfinity(x);
     }
 
-    // 把当前 EXE SHA 与资源目录绑定版本比较，目录失配不继续套用动画定义。
+    // 来源指纹保留原样；新增兼容指纹仅在动画及敌人定义逐文件离线对比一致后登记。
+    // 不能将所有已知 EXE 自动视为资源兼容；仍需单独的目录证据与现场动画核对。
     public static bool MatchesVersion(string sha)
     {
-        return String.Equals(sha, data.GameSha256, StringComparison.OrdinalIgnoreCase);
+        return String.Equals(sha, data.GameSha256, StringComparison.OrdinalIgnoreCase) ||
+            data.CompatibleGameSha256 != null && data.CompatibleGameSha256.Any(hash => String.Equals(sha, hash, StringComparison.OrdinalIgnoreCase));
     }
 
-    // 检查 Actor 类是否存在于已适配敌人目录。
     public static bool DefinedActor(string actorClass)
     {
         return data.Profiles.Any(p => p.ActorClass == actorClass);
@@ -135,7 +132,6 @@ static class CombatDefinitions
         return motions.TryGetValue(name, out motion) ? motion : null;
     }
 
-    // 根据版本、Actor 类、敌对/存活标签唯一识别最具体的敌人类型。
     public static CombatProfile Identify(string sha, string actorClass, IEnumerable<string> ownedTags)
     {
         if (!MatchesVersion(sha) || !ThreatRule.HostileTeam(ownedTags))
@@ -191,6 +187,7 @@ static class CombatDefinitions
         return null;
     }
 
+    // 把已验证现场动画与静态攻击窗口关联，保留时序/执行/几何证据的区分。
     public static CombatObservation Observe(string actorId, CombatProfile profile, CombatMotion motion)
     {
         return new CombatObservation

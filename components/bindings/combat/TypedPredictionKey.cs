@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// NeoRune 编译期绑定：调用原生数组比较 thunk 比较完整预测键。
+// NeoRune 编译期绑定：调用原生数组比较 thunk 比较完整预测键。绑定路径、函数名与形参对应真实反射声明；本文件不在游戏里运行 C#，不能把声明误当作自行实现的游戏逻辑。
 using System.Collections.Generic;
 using NeoRune;
 using UE.CoreUObject;

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 创建自动战斗与装备整理页面，并绑定装备保护规则。
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -315,7 +314,6 @@ sealed partial class ToolboxForm
             };
     }
 
-    // 创建与品质枚举一致的选择控件。
     OreSelect RaritySelect(Control parent, int x, int y, int value)
     {
         var select = new OreSelect
@@ -566,7 +564,6 @@ sealed partial class ToolboxForm
         }
     }
 
-    // 导出只读计划到用户指定路径。
     void ExportEquipmentPlan()
     {
         if (equipmentPlan == null)

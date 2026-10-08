@@ -10,7 +10,6 @@ using System.Diagnostics;
 // 游戏创建自有 SaveGame 模板，只替换组件 Command 字段；不写进程内存、角色存档或远程调用游戏函数。
 static class EquipmentSaveCodec
 {
-    // Field 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     public sealed class Field
     {
         public int SizeOffset, PayloadOffset, PayloadSize, End;
@@ -104,7 +103,6 @@ static class EquipmentSaveCodec
     }
 }
 
-// EquipmentBridgeState 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class EquipmentBridgeState
 {
     public string Epoch, Status;
@@ -113,7 +111,6 @@ sealed class EquipmentBridgeState
 
 sealed class EquipmentBridge
 {
-    const string ExpectedGame = "231147BD0C655A4AE73F90873675D42917F2BFB3A9EE164FC64F217D6D6BD4EF";
     public static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Dungeons2", "Saved", "SaveGames");
     // 自有装备回收请求槽路径，不是角色存档。
     public static string RequestPath
@@ -141,9 +138,12 @@ sealed class EquipmentBridge
     int limit;
     public EquipmentBridge(int pid, EquipmentPolicy rules, bool includeExisting = false, int saleLimit = 0)
     {
-        if (!String.Equals(AdaptationRecord.Get("game.sha256"), ExpectedGame, StringComparison.OrdinalIgnoreCase))
-            throw new Exception(L10n.T("装备回收组件不支持此游戏版本"));
-        started = Process.GetProcessById(pid).StartTime.ToUniversalTime();
+        // 只更新本体的 Steam 准入；出售仍沿用预编译组件与原协议，绝不重建旧 stub。
+        using (var process = Process.GetProcessById(pid))
+        {
+            GameBuildCompatibility.RequireSteam(process);
+            started = process.StartTime.ToUniversalTime();
+        }
         policy = rules;
         epoch = Guid.NewGuid().ToString("N");
         existing = includeExisting;
@@ -177,7 +177,6 @@ sealed class EquipmentBridge
         return state.Epoch == epoch && state.Sequence > 0 && state.Sequence <= sequence && File.GetLastWriteTimeUtc(ReceiptPath) >= started;
     }
 
-    // 更新装备整理命令或续约状态，保持当前保护策略。
     public void Pulse(bool dryRun)
     {
         sequence++;
@@ -186,7 +185,6 @@ sealed class EquipmentBridge
         Write("2|" + epoch + "|" + sequence + "|1|" + normal + "|" + storm + "|" + flags + "|" + (dryRun ? "1" : "0") + "|" + (existing ? "1" : "0") + "|" + limit);
     }
 
-    // 写入本组件的自有通信数据；不能写入角色存档。
     static void Write(string command)
     {
         byte[] bytes = EquipmentSaveCodec.Replace(File.ReadAllBytes(RequestPath), command);
@@ -195,6 +193,7 @@ sealed class EquipmentBridge
         File.Replace(temp, RequestPath, null);
     }
 
+    // 终止本工具拥有的请求并恢复禁用命令，清理未完成状态。
     public static void Stop()
     {
         if (File.Exists(RequestPath))

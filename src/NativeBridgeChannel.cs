@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-// 只有收集和战斗两种邮箱使用新信封；出售存档格式保持原样。
+// 收集、战斗和铁匠使用同一固定信封；出售存档格式保持原样。
 // 固定 2048 字符双份 ASCII 信封编码器；协议与槽模板修改必须两端一致。
 static class NativeMailboxCodec
 {
@@ -22,7 +22,6 @@ static class NativeMailboxCodec
         return (command + "#" + command).PadRight(Width, ' ');
     }
 
-    // 检查双份消息一致后返回命令，拒绝截断或撕裂写入。
     public static string Decode(string encoded)
     {
         if (encoded == null || encoded.Length != Width || encoded.Any(c => c < ' ' || c > 126))
@@ -36,7 +35,7 @@ static class NativeMailboxCodec
     // 仅替换已校验请求模板内的固定 Command 字节区，不改变文件布局。
     public static byte[] Replace(byte[] template, string encoded, string mod)
     {
-        if (mod != "MCD2CombatBridge" && mod != "MCD2NearbyLootBridge")
+        if (mod != "MCD2CombatBridge" && mod != "MCD2NearbyLootBridge" && mod != "MCD2RerollBridge")
             throw new Exception("Unexpected native mailbox class");
         if (encoded == null || encoded.Length != Width || encoded.Any(c => c < ' ' || c > 126))
             throw new Exception("Invalid native mailbox payload");
@@ -48,7 +47,6 @@ static class NativeMailboxCodec
         return bytes;
     }
 
-    // 生成无玩法动作的通信探针命令，验证通道而非收集结果。
     public static string Probe(string protocol, string instance, string epoch, double clock)
     {
         string expiry = (clock + 1).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
@@ -56,13 +54,15 @@ static class NativeMailboxCodec
             return "6|" + instance + "|" + epoch + "|1|probe|-|-|-|0|0|0|" + expiry + "|1|0|500|1000";
         if (protocol == "5")
             return String.Join("|", new[] { "5", instance, epoch, "1", "probe", "-", "-", "-", "1", "0", "0", "0", "0", "0", "0", "0", "1", "0", "80", expiry });
+        if (protocol == "7")
+            return String.Join("|", new[] { "7", instance, epoch, "1", "probe", expiry });
         throw new Exception("Unsupported native transport probe");
     }
 }
 
+// 平台准入检查；GDK 包、模块和运行结构必须属于已验证范围。
 static class NativeBridgeProfile
 {
-    const string Steam = "231147BD0C655A4AE73F90873675D42917F2BFB3A9EE164FC64F217D6D6BD4EF";
     internal const string GdkPackage = "Microsoft.MinecraftDungeons2_1.1.1.0_x64__8wekyb3d8bbwe";
     internal const int GdkImageSize = 197652480;
     // Windows 进程句柄入口；访问权限由调用方传入，句柄需配对关闭。
@@ -71,8 +71,10 @@ static class NativeBridgeProfile
     // 关闭 Windows 原生句柄，与成功打开的句柄配对。
     [DllImport("kernel32.dll")]
     static extern bool CloseHandle(IntPtr handle);
+    // 查询进程的包身份，供限定已验证 WinGDK 包使用。
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     static extern int GetPackageFullName(IntPtr process, ref uint length, StringBuilder name);
+    // 对照已验证包身份、模块大小及运行结构，拒绝未适配 GDK 版本。
     internal static bool MatchesGdk(string name, string package, int imageSize, bool layoutValidated)
     {
         return name == "Dungeons-WinGDK-Shipping" && package == GdkPackage && imageSize == GdkImageSize && layoutValidated;
@@ -83,8 +85,8 @@ static class NativeBridgeProfile
     {
         if (process.ProcessName == "Dungeons-Win64-Shipping")
         {
-            if (!String.Equals(AdaptationRecord.Get("game.sha256"), Steam, StringComparison.OrdinalIgnoreCase))
-                throw new Exception(L10n.T("原生组件不支持此游戏版本"));
+            // Steam 新旧版本共用精确准入；不能因安装成功而绕过未知游戏版本。
+            GameBuildCompatibility.RequireSteam(process);
             return false;
         }
 
@@ -135,7 +137,7 @@ sealed class NativeBridgeChannel
 
     public NativeBridgeChannel(int pid, string component, string version, Func<string, NearbyLootReceipt> parser)
     {
-        if (component == "MCD2CombatBridge" ? version != "5" : component == "MCD2NearbyLootBridge" ? version != "6" : true)
+        if (component == "MCD2CombatBridge" ? version != "5" : component == "MCD2NearbyLootBridge" ? version != "6" : component == "MCD2RerollBridge" ? version != "7" : true)
             throw new Exception("Unknown native mailbox protocol");
         mod = component;
         protocol = version;
@@ -146,7 +148,7 @@ sealed class NativeBridgeChannel
             gdk = NativeBridgeProfile.Require(process);
         }
 
-        string prefix = mod == "MCD2CombatBridge" ? "MCD2Combat" : "MCD2NearbyLoot";
+        string prefix = mod == "MCD2CombatBridge" ? "MCD2Combat" : mod == "MCD2NearbyLootBridge" ? "MCD2NearbyLoot" : "MCD2Reroll";
         if (!gdk)
         {
             requestPath = Path.Combine(EquipmentBridge.Root, prefix + "Request.sav");
@@ -164,8 +166,9 @@ sealed class NativeBridgeChannel
         lastEncoded = EquipmentSaveCodec.Parse(ReadRequest(), "Request", "Command", mod).Value;
         if (NativeMailboxCodec.Decode(lastEncoded) != "OFF")
             throw new Exception(L10n.T("请先按 F9 停止旧工具，再连接原生组件"));
-        if (gdk)
-            Handshake();
+        // Steam 热修复也先执行无玩法动作的探针；文件存在或安装成功不等于当前组件能响应。
+        // probe/OFF 属于既有协议，两端版本号及 Xbox 平台准入保持不变。
+        Handshake();
     }
 
     // 取得当前场景已绑定的请求/回执关联，失效时不继续沿用旧文件。
@@ -210,7 +213,6 @@ sealed class NativeBridgeChannel
         }
     }
 
-    // 读取当前请求命令，用于检测外部写入或停止状态。
     byte[] ReadRequest()
     {
         return gdk ? GdkBridgeTransport.ReadReliable(requestPath) : File.ReadAllBytes(requestPath);
@@ -240,8 +242,8 @@ sealed class NativeBridgeChannel
             }
 
             if (!ready)
-                throw new Exception(L10n.T("GDK 原生组件通信握手失败，未发送游戏动作"));
-            ToolboxLog.Write("Native.GdkHandshake", mod + " protocol=" + protocol + " TransportReady; handshake completed");
+                throw new GameCompatibilityException("组件通信未确认，请重启游戏后重新连接；未发送游戏动作");
+            ToolboxLog.Write("Native.TransportHandshake", mod + " platform=" + (gdk ? "WinGDK" : "Steam") + " protocol=" + protocol + " TransportReady; handshake completed");
         }
         finally
         {
@@ -257,10 +259,9 @@ sealed class NativeBridgeChannel
                 return;
         }
 
-        throw new Exception(L10n.T("GDK 组件未确认恢复停止状态，未发送游戏动作"));
+        throw new GameCompatibilityException("组件未确认停止状态，请重启游戏后重新连接；未发送游戏动作");
     }
 
-    // 写入本组件的自有通信数据；不能写入角色存档。
     public void Write(string command)
     {
         string encoded = NativeMailboxCodec.Encode(command);
@@ -311,6 +312,7 @@ sealed class NativeBridgeChannel
             throw new IOException("GDK fixed mailbox write could not be verified");
     }
 
+    // 终止本工具拥有的请求并恢复禁用命令，清理未完成状态。
     public void Stop()
     {
         // 仅在相同场景恢复本通道自己写下的命令或部分写入。

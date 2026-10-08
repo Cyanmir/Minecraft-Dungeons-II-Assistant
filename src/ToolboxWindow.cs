@@ -50,14 +50,15 @@ sealed class ToolboxSettings
         true
     };
     public int AttackTrigger = 1;
-    // 组合默认 G，跳劈触发空格、补按 Q、延迟 30 毫秒；右键闪避使用 R。
+    // 组合默认 G，跳劈触发空格、补按 Q、延迟 30 毫秒；DodgeKey 仅兼容旧配置，闪避派发读游戏实时绑定。
     public int ComboTrigger = 0x47, JumpTrigger = 0x20, JumpKey = 0x51, JumpDelay = 30, DodgeKey = 0x52;
     public bool GamepadEnabled = true;
     public int PadStart, PadStop, PadCombo;
     // 药水备用、原生灵魂成本读取和统一后台控制；辅助快捷操作有独立输入冲突检查。
     public bool PotionFallback = true, AutoCost = true, BackgroundAuto = true;
-    // 更新默认启动检查、正式通道；自动覆盖需用户自行开启。0 正式 Release，1 Dev 预发布。
     public bool UpdateOnStartup = true, UpdateAutomatically;
+    // 展示资源单独自动拉取；旧配置缺少此键时保持开启，网络失败保留缓存。
+    public bool ResourceAutoUpdate = true;
     public int UpdateChannel;
     // 药水默认 E；手动灵魂成本默认 65；成本参考槽从 0 开始，默认第三槽。
     public int PotionKey = 0x45, SoulCost = 65, PotionSlot = 2;
@@ -104,7 +105,6 @@ sealed class ToolboxSettings
         }
     }
 
-    // 读取 key=value 配置，忽略退役键，并限幅数值和迁移旧法器选择。
     public static ToolboxSettings Parse(IEnumerable<string> lines)
     {
         var s = new ToolboxSettings();
@@ -119,6 +119,9 @@ sealed class ToolboxSettings
                     continue;
                 switch (pair[0])
                 {
+                    case "resourceAutoUpdate":
+                        s.ResourceAutoUpdate = value != 0;
+                        break;
                     case "nearbyChests":
                         s.NearbyChests = value != 0;
                         break;
@@ -254,7 +257,7 @@ sealed class ToolboxSettings
                         s.DodgeEnabled = value != 0;
                         break;
                     case "dodgeKey":
-                        break; // 退役的自定义闪避设置；当前闪避固定使用 R。
+                        break; // 退役的自定义闪避设置；当前闪避派发读取实际 DirectionalDodge。
                     case "extraEnabled":
                         break;
                     case "combo1":
@@ -326,6 +329,7 @@ sealed class ToolboxSettings
             "updateOnStartup=" + (UpdateOnStartup ? 1 : 0),
             "updateAutomatically=" + (UpdateAutomatically ? 1 : 0),
             "updateChannel=" + UpdateChannel,
+            "resourceAutoUpdate=" + (ResourceAutoUpdate ? 1 : 0),
             "language=" + Language,
             "potionFallback=" + (PotionFallback ? 1 : 0),
             "autoCost=" + (AutoCost ? 1 : 0),
@@ -427,7 +431,6 @@ sealed class ToolboxSettings
         return result.Distinct().ToArray();
     }
 
-    // 检查启用功能与键位冲突，返回可显示错误，不发送游戏输入。
     public string Validate()
     {
         if (GamepadEnabled)
@@ -472,8 +475,7 @@ sealed class ToolboxSettings
             outputs.AddRange(ComboKeys());
         if (JumpEnabled)
             outputs.Add(JumpKey);
-        if (DodgeEnabled)
-            outputs.Add(DodgeKey);
+        // 闪避运行时核对实际 DirectionalDodge，不用历史 R 默认值判定输出冲突。
         if (ComboEnabled && outputs.Contains(ComboTrigger))
             return L10n.T("法器连发的触发键不能与自动发送的按键相同。");
         if (JumpEnabled && outputs.Contains(JumpTrigger))
@@ -622,10 +624,8 @@ static partial class ToolboxInput
     // 读取窗口所属 PID，避免把输入发到其他程序。
     [DllImport("user32.dll")]
     static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
-    // 读取物理按键状态，检测人工操作和按键冲突。
     [DllImport("user32.dll")]
     static extern short GetAsyncKeyState(int key);
-    // 读取屏幕鼠标位置，供输入条件及“不移动鼠标”的结果核对使用。
     [DllImport("user32.dll")]
     static extern bool GetCursorPos(out Point point);
     static readonly bool[] previousKeys = new bool[255];
@@ -660,7 +660,6 @@ static partial class ToolboxInput
     // 向窗口投递普通键消息；发送前核对窗口存活和目标 PID。
     [DllImport("user32.dll", SetLastError = true)]
     static extern bool PostMessage(IntPtr window, uint message, IntPtr wparam, IntPtr lparam);
-    // 检查窗口句柄是否仍有效。
     [DllImport("user32.dll")]
     static extern bool IsWindow(IntPtr window);
     // 向 Windows 注册快捷键；组合冲突应反馈用户，不静默覆盖。
@@ -677,6 +676,9 @@ static partial class ToolboxInput
         return pid == (uint)id;
     }
 
+    // 缓存本体 PID，独立输入线程只读原生窗口归属，不访问 WinForms 控件。
+    internal static readonly int ToolProcessId = Process.GetCurrentProcess().Id;
+
     public static IntPtr Foreground
     {
         get
@@ -691,7 +693,6 @@ static partial class ToolboxInput
         return (GetAsyncKeyState(k) & 0x8000) != 0;
     }
 
-    // 读取 Ctrl/Alt/Shift/Windows 等修饰键状态。
     public static bool Modifiers()
     {
         return Held(16) || Held(17) || Held(18) || Held(91) || Held(92);
@@ -703,13 +704,11 @@ static partial class ToolboxInput
         return Held(17) || Held(18) || Held(91) || Held(92);
     }
 
-    // 检测人工输入占用，决定是否允许当前键消息。
     public static bool Busy(int[] keys)
     {
         return Modifiers() || keys.Any(Held);
     }
 
-    // 检查键码是否在可配置白名单中，排除保留/危险输入。
     public static bool Allowed(int key)
     {
         return key >= 8 && key <= 254 && key != 0x77 && key != 0x78 && key != 0x1b && key != 16 && key != 17 && key != 18 && key != 91 && key != 92 && key != 93 && key != 0x5f && key != 0xe7 && key != 0xe5 && key != 0x14 && key != 0x90 && key != 0x91 && !(key >= 0xa0 && key <= 0xa5);
@@ -805,7 +804,6 @@ static partial class ToolboxInput
     }
 }
 
-// PadSample 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 struct PadSample
 {
     public int Index, Buttons;
@@ -972,7 +970,6 @@ sealed class PadEdges
 {
     int index = -1, previous, current;
     bool neutral, active;
-    // 保存当前/前一帧手柄状态，供按下边缘触发。
     public void Update(PadSample sample, bool scope)
     {
         bool same = sample.Index == index;
@@ -992,7 +989,6 @@ sealed class PadEdges
         active = neutral;
     }
 
-    // 检查按钮或组合当前是否处于按下状态。
     public bool Down(int mask)
     {
         return active && mask != 0 && (current & mask) == mask;
@@ -1185,7 +1181,6 @@ sealed class KeyButton : OreButton
         };
     }
 
-    // 生成当前待绑定键的 UI 提示。
     public string OutputPrompt()
     {
         return PadBinding == 0 || MappedKeyboard == 0 ? L10n.T("游戏手柄键位未读取，请检查游戏内绑定。") : String.Format(L10n.T("跟随游戏键位：{0} → {1}\n使用对应的键盘操作；手柄按钮请在游戏内修改。"), XboxPad.Name(PadBinding), ToolboxInput.Name(MappedKeyboard));
@@ -1245,6 +1240,31 @@ sealed class RightDodgeRule
 
 sealed class RightMouseHook : IDisposable
 {
+    // 低级钩子在独立线程安装，避免游戏读取和布局阻塞回调。
+    // 独立线程只泵 Windows 消息并排队回调，实际游戏读取和发送仍由主窗口负责。
+    [StructLayout(LayoutKind.Sequential)]
+    struct MESSAGE
+    {
+        public IntPtr window;
+        public uint message;
+        public UIntPtr parameter;
+        public IntPtr data;
+        public uint time;
+        public int x, y;
+        public uint reserved;
+    }
+    [DllImport("user32.dll")]
+    static extern bool PeekMessage(out MESSAGE message, IntPtr window, uint first, uint last, uint remove);
+    [DllImport("user32.dll")]
+    static extern int GetMessage(out MESSAGE message, IntPtr window, uint first, uint last);
+    [DllImport("user32.dll")]
+    static extern bool TranslateMessage(ref MESSAGE message);
+    [DllImport("user32.dll")]
+    static extern IntPtr DispatchMessage(ref MESSAGE message);
+    [DllImport("user32.dll")]
+    static extern bool PostThreadMessage(uint thread, uint message, UIntPtr parameter, IntPtr data);
+    [DllImport("kernel32.dll")]
+    static extern uint GetCurrentThreadId();
     // 与原生 ABI 对应的数据结构；字段顺序、类型及 StructLayout 决定字节布局，不能仅为美观调整。
     [StructLayout(LayoutKind.Sequential)]
     struct DATA
@@ -1274,12 +1294,16 @@ sealed class RightMouseHook : IDisposable
     bool passThroughPair;
     readonly RightDodgeRule rule = new RightDodgeRule();
     IntPtr handle;
+    readonly Thread hookThread;
+    readonly ManualResetEvent started = new ManualResetEvent(false);
+    volatile bool installed, disposed;
+    uint threadId;
     // 当前鼠标钩子是否成功安装。
     public bool Installed
     {
         get
         {
-            return handle != IntPtr.Zero;
+            return installed && !disposed;
         }
     }
 
@@ -1289,7 +1313,37 @@ sealed class RightMouseHook : IDisposable
         dodge = onDodge;
         consumeInput = shouldConsume ?? (() => true);
         callback = Observe;
-        handle = SetWindowsHookEx(14, callback, GetModuleHandle(null), 0);
+        hookThread = new Thread(Pump) { IsBackground = true, Name = "MCD2A.RightMouse" };
+        hookThread.Start();
+        started.WaitOne(2000);
+        if (!installed) Dispose();
+    }
+
+    void Pump()
+    {
+        try
+        {
+            threadId = GetCurrentThreadId();
+            MESSAGE message;
+            PeekMessage(out message, IntPtr.Zero, 0, 0, 0);
+            if (disposed) return;
+            handle = SetWindowsHookEx(14, callback, GetModuleHandle(null), 0);
+            installed = handle != IntPtr.Zero;
+            started.Set();
+            if (!installed) return;
+            while (!disposed && GetMessage(out message, IntPtr.Zero, 0, 0) > 0)
+            {
+                TranslateMessage(ref message);
+                DispatchMessage(ref message);
+            }
+        }
+        catch (Exception error) { ToolboxLog.Error("Input.RightMouse", error); }
+        finally
+        {
+            if (handle != IntPtr.Zero) UnhookWindowsHookEx(handle);
+            handle = IntPtr.Zero; installed = false;
+            started.Set();
+        }
     }
 
     IntPtr Observe(int code, IntPtr message, IntPtr data)
@@ -1299,10 +1353,12 @@ sealed class RightMouseHook : IDisposable
             try
             {
                 var input = (DATA)Marshal.PtrToStructure(data, typeof(DATA));
+                // 注入事件不改变物理右键周期，避免破坏已经吞下按下的配对。
+                if ((input.flags & 3) != 0) return CallNextHookEx(handle, code, message, data);
                 bool fire;
                 if (message.ToInt64() == 0x204)
                     passThroughPair = !consumeInput();
-                bool consume = rule.Handle(message.ToInt64() == 0x205, (input.flags & 3) != 0, active(), ToolboxInput.Held(16), ToolboxInput.OtherModifiers(), out fire);
+                bool consume = rule.Handle(message.ToInt64() == 0x205, false, active(), ToolboxInput.Held(16), ToolboxInput.OtherModifiers(), out fire);
                 if (fire)
                     dodge();
                 if (consume && !passThroughPair)
@@ -1320,11 +1376,11 @@ sealed class RightMouseHook : IDisposable
     // 释放本对象拥有的句柄、绘图对象或监听资源，避免退出后继续占用。
     public void Dispose()
     {
-        if (handle != IntPtr.Zero)
-        {
-            UnhookWindowsHookEx(handle);
-            handle = IntPtr.Zero;
-        }
+        if (disposed) return;
+        disposed = true;
+        if (threadId != 0) PostThreadMessage(threadId, 0x12, UIntPtr.Zero, IntPtr.Zero);
+        // 回调仅 BeginInvoke，不等待 UI；正常退出在此完成卸钩。超时则由线程 finally 清理。
+        if (Thread.CurrentThread != hookThread && hookThread.Join(500)) started.Dispose();
     }
 }
 
@@ -1336,8 +1392,9 @@ sealed class InputRequest
     public int Delay, Generation;
     public long Expires;
     public bool Healing, Controller, Threat, CombatAttack, CombatArtifacts, CombatEvade, NearbyLoot;
-    // 显式标记人工法器组合，独立于自动恢复槽位；不能根据翻译后的动作描述推断类型。
     public bool Hotbar;
+    // 人工右键明确标识，派发前从当前游戏绑定读取 DirectionalDodge，不能借用出售/自动闪避接口。
+    public bool RightDodge;
 }
 
 // 主窗口的一个 partial 部分；事件处理与异步任务共用主窗口状态，退出时统一清理。
@@ -1435,7 +1492,6 @@ sealed partial class ToolboxForm : Form
     bool exitAnimation, exitReady;
     Panel movingPage;
     Rectangle movingBounds;
-    // 读取 Windows 动效偏好，用于窗口页面动画。
     [DllImport("user32.dll")]
     static extern bool SystemParametersInfo(uint action, uint parameter, out bool value, uint flags);
     // 按系统偏好和窗口状态判断是否启用页面动效。
@@ -1486,6 +1542,8 @@ sealed partial class ToolboxForm : Form
         base.OnShown(e);
         if (interactive && settings.UpdateOnStartup)
             CheckAppUpdates(true);
+        if (interactive)
+            CheckResourceUpdates(true);
         if (interactive && MotionAllowed())
         {
             Opacity = 0;
@@ -1717,8 +1775,8 @@ sealed partial class ToolboxForm : Form
         var note = LabelAt(sidebar, L10n.T("按你的游玩习惯配置"), 24, 52, 190, 32);
         note.ForeColor = OreTheme.Muted;
         ((PixelLabel)note).PixelScale = 1;
-        pages = new Panel[7];
-        navigation = new OreButton[7];
+        pages = new Panel[8];
+        navigation = new OreButton[8];
         string[] names =
         {
             L10n.T("自动恢复"),
@@ -1726,8 +1784,9 @@ sealed partial class ToolboxForm : Form
             L10n.T("附近交互"),
             L10n.T("设置"),
             L10n.T("自动战斗"),
-            L10n.T("装备整理"),
-            L10n.T("首页")
+            L10n.T("装备整理（实验）"),
+            L10n.T("首页"),
+            L10n.T("自动刷词条")
         };
         for (int i = 0; i < pages.Length; i++)
         {
@@ -1737,8 +1796,8 @@ sealed partial class ToolboxForm : Form
                 Text = names[i],
                 Tag = L10n.Canonical(names[i]),
                 Navigation = true,
-                IconIndex = Array.IndexOf(new[] { 6, 0, 2, 4, 5, 3 }, i),
-                Location = new Point(8, 96 + Math.Max(0, Array.IndexOf(new[] { 6, 0, 2, 4, 5, 3 }, i)) * (OreMetrics.NavItemHeight + 4)),
+                IconIndex = Array.IndexOf(new[] { 6, 0, 2, 4, 5, 7, 3 }, i),
+                Location = new Point(8, 96 + Math.Max(0, Array.IndexOf(new[] { 6, 0, 2, 4, 5, 7, 3 }, i)) * (OreMetrics.NavItemHeight + 4)),
                 Size = new Size(OreMetrics.NavWidth - 32, OreMetrics.NavItemHeight),
                 Visible = i != 1,
                 PixelScale = 2
@@ -1755,24 +1814,24 @@ sealed partial class ToolboxForm : Form
             Controls.Add(pages[i]);
         }
 
-        LabelAt(sidebar, L10n.T("快捷操作"), 24, 421, 187, 25).ForeColor = OreTheme.Muted;
-        var startCaption = (PixelLabel)LabelAt(sidebar, L10n.T("开始 / 暂停"), 18, 452, 124, 32);
+        LabelAt(sidebar, L10n.T("快捷操作"), 24, 473, 187, 25).ForeColor = OreTheme.Muted;
+        var startCaption = (PixelLabel)LabelAt(sidebar, L10n.T("开始 / 暂停"), 18, 504, 124, 32);
         startCaption.Wrap = false;
         startCaption.VerticalCenter = true;
         startCaption.PixelScale = 0.85f;
         startCaption.EnglishScale = 0.7f;
-        padStartButton = KeyAt(sidebar, 0x77, 146, 452, 61);
+        padStartButton = KeyAt(sidebar, 0x77, 146, 504, 61);
         padStartButton.Height = 32;
         padStartButton.PixelScale = 0.75f;
         padStartButton.AllowGamepad = true;
         padStartButton.FixedKeyboard = true;
         padStartButton.PadBinding = settings.PadStart;
-        var stopCaption = (PixelLabel)LabelAt(sidebar, L10n.T("立即停止"), 18, 488, 124, 32);
+        var stopCaption = (PixelLabel)LabelAt(sidebar, L10n.T("立即停止"), 18, 540, 124, 32);
         stopCaption.Wrap = false;
         stopCaption.VerticalCenter = true;
         stopCaption.PixelScale = 0.85f;
         stopCaption.EnglishScale = 0.7f;
-        padStopButton = KeyAt(sidebar, 0x78, 146, 488, 61);
+        padStopButton = KeyAt(sidebar, 0x78, 146, 540, 61);
         padStopButton.Height = 32;
         padStopButton.PixelScale = 0.75f;
         padStopButton.AllowGamepad = true;
@@ -1782,7 +1841,7 @@ sealed partial class ToolboxForm : Form
         {
             Text = L10n.T("导出日志"),
             Tag = "导出日志",
-            Location = new Point(18, 538),
+            Location = new Point(18, 590),
             Size = new Size(188, 42),
             PixelScale = 1
         };
@@ -1795,7 +1854,7 @@ sealed partial class ToolboxForm : Form
         {
             Text = L10n.T("许可与致谢"),
             Tag = "许可与致谢",
-            Location = new Point(18, 590),
+            Location = new Point(18, 642),
             Size = new Size(188, 34),
             PixelScale = 0.8f
         };
@@ -1887,7 +1946,6 @@ sealed partial class ToolboxForm : Form
         intervalNote.ForeColor = OreTheme.Muted;
         retry = Number(timing, 523, 18, 1, 120, settings.RetrySeconds, 201);
         retry.Suffix = L10n.T("秒");
-        // 设置页先展示组件安装，后台运行接在 220 高的组件卡片之后。
         var background = Card(pages[3], 232, 116);
         LabelAt(background, L10n.T("游戏后台运行"), 20, 17, 580, 26);
         LabelAt(background, L10n.T("统一控制已选功能，F9 停止所有操作。"), 20, 58, 704, 30).ForeColor = OreTheme.Muted;
@@ -2073,6 +2131,8 @@ sealed partial class ToolboxForm : Form
             };
         BuildDashboard();
         BuildUpdateSettings();
+        BuildRerollPage();
+        BuildResourceSettings();
         ApplyLanguage();
         RefreshEquipmentLanguage();
         RefreshRecoveryMode();
@@ -2125,7 +2185,6 @@ sealed partial class ToolboxForm : Form
             ToolboxLog.Write("Startup", DiagnosticState());
     }
 
-    // 记录控件基准位置，供窗口尺寸变化布局使用。
     void RecordLayout(Control parent)
     {
         foreach (Control c in parent.Controls)
@@ -2195,18 +2254,20 @@ sealed partial class ToolboxForm : Form
             L10n.T("附近交互"),
             L10n.T("设置"),
             L10n.T("附近敌人自动战斗"),
-            L10n.T("装备整理"),
-            L10n.T("首页")
+            L10n.T("装备整理（实验）"),
+            L10n.T("首页"),
+            L10n.T("自动刷词条")
         };
         string[] descriptions =
         {
             L10n.T("低于设定血量时，自动组合使用已选法器。"),
             L10n.T("法器组合、跳劈和右键闪避"),
             L10n.T("自动拾取、开箱、食用和破罐；可调整交互间隔"),
-            L10n.T("一次安装收集、战斗和装备回收组件"),
+            L10n.T("一次安装收集、战斗、装备回收和铁匠组件"),
             L10n.T("原地近战与提前使用法器；药水遵循血量阈值"),
             L10n.T("自定义快捷键整理新拾取装备，保留受保护物品"),
-            L10n.T("连接游戏，选择功能，再按 F8 开始")
+            L10n.T("连接游戏，选择功能，再按 F8 开始"),
+            ""
         };
         for (int i = 0; i < pages.Length; i++)
         {
@@ -2217,10 +2278,10 @@ sealed partial class ToolboxForm : Form
 
         pageTitle.Text = titles[index];
         pageDescription.Text = UiCaption(descriptions[index]);
+        pageTitle.FlushLeft = pageDescription.FlushLeft = index == 7;
         RefreshDashboard();
     }
 
-    // 创建页面卡片容器并设定布局尺寸。
     static OreCard Card(Control parent, int y, int height)
     {
         var p = new OreSection
@@ -2307,7 +2368,6 @@ sealed partial class ToolboxForm : Form
         return n;
     }
 
-    // 创建可重绑定按键控件并绑定配置回调。
     static KeyButton KeyAt(Control parent, int key, int x, int y, int w)
     {
         var b = new KeyButton(key)
@@ -2320,7 +2380,6 @@ sealed partial class ToolboxForm : Form
         return b;
     }
 
-    // 创建操作按钮并连接既有行为入口。
     static Button ButtonAt(Control parent, string text, int x, int y, int w)
     {
         var b = new OreButton
@@ -2455,6 +2514,9 @@ sealed partial class ToolboxForm : Form
         RefreshEquipmentLanguage();
         RefreshActionLabels();
         RefreshUpdateLanguage();
+        RefreshResourceLanguage();
+        SearchRerollEquipment();
+        RefreshRerollDisplay();
         retry.Suffix = L10n.T("秒");
         retry.Invalidate();
         RefreshRecoveryMode();
@@ -2475,13 +2537,11 @@ sealed partial class ToolboxForm : Form
         Invalidate(true);
     }
 
-    // 设置稳定语言索引并刷新 UI；参数决定是否保存用户选择。
     public void SetLanguage(bool english)
     {
         SetLanguage(english ? 1 : 0);
     }
 
-    // 设置稳定语言索引并刷新 UI；参数决定是否保存用户选择。
     public void SetLanguage(int language)
     {
         Arm(false);
@@ -2508,7 +2568,6 @@ sealed partial class ToolboxForm : Form
         healthBar.Percent = 100 * hp / max;
     }
 
-    // 根据自动槽选择刷新法器/仅药水模式说明。
     void RefreshRecoveryMode()
     {
         bool artifacts = !settings.PotionOnly;
@@ -2520,7 +2579,6 @@ sealed partial class ToolboxForm : Form
             artifactNote.Text = L10n.T("未选择法器，仅按血量与药水冷却自动使用药水。");
     }
 
-    // 更新单个法器槽名称、成本和可用性显示。
     void UpdateArtifact()
     {
         artifactCosts = new[]
@@ -2616,7 +2674,8 @@ sealed partial class ToolboxForm : Form
 
         if (interactive && m.Msg == 0x312)
         {
-            if (Form.ActiveForm != null && Form.ActiveForm != this)
+            // 详情等自有窗口获得焦点时仍接收 F9 紧急停止；其他启动热键继续避免误触。
+            if (Form.ActiveForm != null && Form.ActiveForm != this && m.WParam.ToInt32() != 9)
             {
                 m.Result = IntPtr.Zero;
                 return;
@@ -2643,7 +2702,6 @@ sealed partial class ToolboxForm : Form
         }
     }
 
-    // 检查右键闪避是否启用且满足前台/玩家等前置条件。
     bool DodgeActive()
     {
         return !exportingLogs && !closing && !connecting && armed && settings.DodgeEnabled && reader != null && readGate.Ready && !conflict && hp > 0 && ShortcutScope() && (!GameForeground() || clock.ElapsedMilliseconds - focusSince >= 600);
@@ -2659,7 +2717,8 @@ sealed partial class ToolboxForm : Form
             {
                 if (captured != generation || !DodgeActive())
                     return;
-                if (pressing && currentHealing)
+                // 人工闪避优先于本工具的等待动作；等待取消清理完成后才派发，绝不并发发送。
+                if (pressing)
                 {
                     if (actionCancel != null)
                         actionCancel.Cancel();
@@ -2675,11 +2734,13 @@ sealed partial class ToolboxForm : Form
                     Description = L10n.T("右键闪避"),
                     Generation = generation,
                     Expires = clock.ElapsedMilliseconds + 600,
-                    Healing = false
+                    Healing = false,
+                    RightDodge = true
                 };
+                ToolboxLog.Write("Input.RightDodge", "physical right-click queued; live DirectionalDodge binding checked before dispatch");
                 var pending = new Queue<InputRequest>();
                 pending.Enqueue(request);
-                foreach (var r in requests.Take(3))
+                foreach (var r in requests.Where(r => !r.RightDodge).Take(3))
                     pending.Enqueue(r);
                 requests = pending;
             });
@@ -2718,9 +2779,11 @@ sealed partial class ToolboxForm : Form
     // 统一开启或停止监测；停止时必须释放输入和组件请求。
     void Arm(bool on)
     {
+        if (on && (RerollRunning || rerollStarting)) StopRerollObservation();
         if (!on)
         {
             StopEquipment();
+            StopRerollObservation();
             StopDirectLoot();
             StopNativeCombat();
         }
@@ -2752,7 +2815,6 @@ sealed partial class ToolboxForm : Form
         status.Text = armed ? L10n.T("已开启，持续检测血量与冷却。进菜单前按 F9 停止。") : L10n.T("已停止，按 F8 开始。");
     }
 
-    // 释放当前工具拥有的键和请求状态，不释放玩家自行按下的输入。
     void Release()
     {
         ReleaseCombat();
@@ -2960,7 +3022,6 @@ sealed partial class ToolboxForm : Form
             lastAllCooldownKnown = now;
     }
 
-    // 检查已知输入冲突来源，按当前规则决定是否暂停。
     static bool OtherTool()
     {
         foreach (Process p in Process.GetProcesses())
@@ -3005,7 +3066,6 @@ sealed partial class ToolboxForm : Form
         RefreshActionLabels();
     }
 
-    // 更新已启用动作的键位/手柄显示。
     void RefreshActionLabels()
     {
         for (int i = 0; i < 3; i++)
@@ -3025,7 +3085,6 @@ sealed partial class ToolboxForm : Form
         requests.Enqueue(new InputRequest { Keys = keys, Description = name, Delay = delay, Generation = generation, Expires = now + 600, Healing = healing, Controller = controller, Hotbar = hotbar });
     }
 
-    // 检查输入请求是否仍属于当前会话及启用状态。
     bool Active(InputRequest request)
     {
         return !exportingLogs && !closing && armed && reader != null && readGate.Ready && !conflict && GameScope();
@@ -3038,7 +3097,6 @@ sealed partial class ToolboxForm : Form
         return Math.Abs((int)current) > deadzone && Math.Abs((int)current - previous) > 2000;
     }
 
-    // 读取手柄边缘触发并处理启停/组合输入。
     void PollGamepad()
     {
         if (closing)
@@ -3102,6 +3160,7 @@ sealed partial class ToolboxForm : Form
         {
             long now = clock.ElapsedMilliseconds;
             PollEquipment(now);
+            PollRerollObservation(now);
             if (pageIndex == 4 && now - lastMeleeRangeDisplay >= 1000)
             {
                 lastMeleeRangeDisplay = now;
@@ -3168,7 +3227,7 @@ sealed partial class ToolboxForm : Form
             bool automatic = active;
             // 原生战斗的回执等待不能占住恢复通道；近战、闪避和法器都让位给可用的低血量恢复。
             // 只取消本工具正在执行的战斗请求，不中断恢复，也不取消玩家手动激活的能力。
-            if (automatic && settings.HealEnabled && lowSamples >= 2 && healRule.Ready(hp, max, settings.Threshold, now, settings.RetrySeconds) && currentAction != null && NativeRequestRoute(currentAction) && (currentAction.CombatArtifacts || currentAction.CombatAttack || currentAction.CombatEvade || currentAction.Hotbar) && actionCancel != null && !actionCancel.IsCancellationRequested)
+            if (automatic && settings.HealEnabled && lowSamples >= 2 && healRule.Ready(hp, max, settings.Threshold, now, settings.RetrySeconds) && currentAction != null && NativeRequestRoute(currentAction) && (currentAction.CombatArtifacts || currentAction.CombatAttack || currentAction.CombatEvade) && actionCancel != null && !actionCancel.IsCancellationRequested)
             {
                 bool potion;
                 if (RecoveryRule.Select(settings, cooldowns, souls, artifactCosts, out potion).Length > 0)
@@ -3362,12 +3421,32 @@ sealed partial class ToolboxForm : Form
             int[] recoverySlots = recoveryOutput ? request.Keys.Select(key => key == settings.PotionKey ? 3 : Array.IndexOf(settings.Slots, key)).Where(slot => slot >= 0).Distinct().ToArray() : new int[0];
             float recoveryHealth = hp;
             var recoveryCooldowns = (CooldownInfo[])cooldowns.Clone();
-            if (request.Controller || recoveryOutput)
+            // 人工组合一次发送全部已选槽位的当前绑定，不按本体的费用读数漏掉免费/不可读槽位。
+            // 游戏原本的冷却、灵魂、互斥和能力条件仍决定哪些法器可以实际激活。
+            if (request.Controller || recoveryOutput || request.Hotbar)
             {
                 if (reader == null)
                     return;
                 var bindings = reader.GameBindings();
                 request.Keys = request.Controller ? bindings.Route(settings, request.Keys) : bindings.RouteKeyboard(settings, request.Keys);
+            }
+            if (request.RightDodge)
+            {
+                int key = reader.ManualDodgeKey();
+                if (key == 0)
+                {
+                    ToolboxLog.Limited("Input.RightDodgeBlocked", "live dodge binding, player/UI or roll charge unavailable");
+                    status.Text = L10n.T("闪避未就绪或游戏闪避键未读取");
+                    return;
+                }
+                if (settings.ComboEnabled && key == settings.ComboTrigger || settings.JumpEnabled && key == settings.JumpTrigger)
+                    throw new Exception(L10n.T("游戏键位与工具箱触发键冲突，请更换触发键。"));
+                request.Keys = new[] { key };
+            }
+            if (request.Hotbar && !reader.ManualShortcutReady(false))
+            {
+                ToolboxLog.Limited("Input.ComboBlocked", "player or gameplay UI unavailable");
+                return;
             }
 
             bool background = reader != null && !ToolboxInput.Front(reader.Pid);
@@ -3397,8 +3476,8 @@ sealed partial class ToolboxForm : Form
                 consumedThreats.Add(request.ThreatId);
             if (recoveryOutput)
                 ObserveRecoveryOutput(reader, request.Generation, recoverySlots, recoveryHealth, recoveryCooldowns);
-            // 自动恢复按键跨越多个游戏帧；后台沿用既有保持时间，人工组合仍使用原来的短按。
-            await Task.Delay(background ? (recoveryOutput ? 800 : 100) : recoveryOutput ? 180 : 60, cancel.Token);
+            // 组合与闪避跨越多个游戏帧后成对释放，避免 60ms 短按被低帧率输入采样漏掉。
+            await Task.Delay(background ? (recoveryOutput ? 800 : 180) : recoveryOutput || request.Hotbar || request.RightDodge ? 180 : 60, cancel.Token);
         }
         catch (OperationCanceledException)
         {
@@ -3467,7 +3546,6 @@ sealed partial class ToolboxForm : Form
         return float.IsNaN(value) || float.IsInfinity(value) ? "unknown" : value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    // 生成去重键位列表的诊断名称。
     static string KeyList(int[] keys)
     {
         return String.Join(",", keys.Select(k => "0x" + k.ToString("X")));
@@ -3546,7 +3624,6 @@ sealed partial class ToolboxForm : Form
         }
     }
 
-    // 打开包含 MIT 及第三方许可的只读对话框。
     void ShowLicenses()
     {
         if (exportingLogs || closing)
@@ -3570,7 +3647,6 @@ sealed partial class ToolboxForm : Form
         }
     }
 
-    // 记录未处理异常并停止自动动作，保留用户可见错误状态。
     public void ReportUnhandledError(Exception e)
     {
         ToolboxLog.Error("Unhandled.UI", e);
@@ -3600,7 +3676,6 @@ sealed class ConnectionReadGate
         failedSince = -1;
     }
 
-    // 记录一次必要遥测成功读取。
     public void Success()
     {
         Ready = true;
@@ -3621,11 +3696,11 @@ static class ToolboxProgram
 {
 
     [STAThread]
-    // 程序启动和诊断参数入口；版本展示与报告同步，诊断分支不会自动进入正常窗口。
     static int Main(string[] args)
     {
         if (args.Length == 3 && args[0] == "--apply-update")
             return AppUpdater.Apply(args[1], args[2]);
+        OreDpi.Enable();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 

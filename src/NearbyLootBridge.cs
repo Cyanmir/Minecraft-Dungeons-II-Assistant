@@ -57,7 +57,6 @@ sealed class NearbyLootBridge
         return channel.Read();
     }
 
-    // 检查单个协议字段，拒绝分隔符或超长内容造成的消息歧义。
     static string Field(string value)
     {
         if (String.IsNullOrEmpty(value) || value.Length > 160 || value.Any(c => c < ' ' || c > 126 || c == '|'))
@@ -102,12 +101,12 @@ sealed class NearbyLootBridge
         return receipt.Instance == instance && receipt.Epoch == epoch && receipt.Sequence == sequence;
     }
 
-    // 写入本组件的自有通信数据；不能写入角色存档。
     void Write(string command)
     {
         channel.Write(command);
     }
 
+    // 终止本工具拥有的请求并恢复禁用命令，清理未完成状态。
     public void Stop()
     {
         try
@@ -120,15 +119,12 @@ sealed class NearbyLootBridge
         }
     }
 
-    // PointProof 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
-
 }
 
 // 主窗口的一个 partial 部分；事件处理与异步任务共用主窗口状态，退出时统一清理。
 sealed partial class ToolboxForm
 {
     NearbyLootBridge nearbyDirectBridge;
-    // 关闭当前直接收集请求并释放工具端通道。
     void StopDirectLoot()
     {
         nearbyObservation.Cancel();

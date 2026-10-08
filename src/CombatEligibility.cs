@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 读取玩家菜单、生命和战斗可用性状态。
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-// CombatReadiness 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatReadiness
 {
     public bool Known, Alive, HasRollCharge, GameplayUiOnly, AbilityEligibilityVerified, CanExecute;
@@ -14,9 +12,29 @@ sealed class CombatReadiness
     public string[] ActivePanels, PlayerTags;
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
+    // 人工辅助只检查当前本地玩家、游戏界面及（闪避时）实际充能，不借用自动避险的路径规划。
+    // 能力的费用/冷却/方向仍由游戏普通输入处理；不因本体费用文字不可读漏掉组合槽位。
+    public bool ManualShortcutReady(bool dodge)
+    {
+        Identity player = Pawn();
+        var readiness = ReadCombatReadiness(player);
+        return Valid(player) && readiness.Known && readiness.Alive && readiness.GameplayUiOnly && (!dodge || readiness.HasRollCharge);
+    }
+
+    public int ManualDodgeKey()
+    {
+        if (!ManualShortcutReady(true)) return 0;
+        var bindings = AllKeyboardBindings();
+        string name;
+        if (!bindings.TryGetValue("DirectionalDodge", out name)) return 0;
+        int key = GameActionBindings.KeyboardCode(name);
+        if (!ToolboxInput.Allowed(key) || bindings.Any(pair => pair.Key != "DirectionalDodge" && pair.Value == name)) return 0;
+        AdaptationRecord.Set("input.manual.dodge", "live DirectionalDodge=" + name + "; normal game input; native charge/UI checked");
+        return key;
+    }
+
     readonly Dictionary<long, Identity> combatWidgets = new Dictionary<long, Identity>();
     // 范围仅作为说明，每秒刷新一次，避免在 75ms 战斗轮询中重复枚举属性集。
     Identity meleeRangeOwner;
@@ -35,6 +53,7 @@ sealed partial class HealthReader
         }
     }
 
+    // 从已验证玩家 ASC 的唯一近战属性集读取武器范围；只做 UI 说明，不写属性。
     double? ReadMeleeRange(Identity player)
     {
         int now = Environment.TickCount;

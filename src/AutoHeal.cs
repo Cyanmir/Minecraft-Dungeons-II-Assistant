@@ -66,7 +66,6 @@ sealed class Memory : IDisposable
         return BitConverter.ToInt32(Read(a, 4), 0);
     }
 
-    // 读取单精度浮点数并拒绝 NaN/无穷值，防止坏遥测进入判断。
     public float F(long a)
     {
         float f = BitConverter.ToSingle(Read(a, 4), 0);
@@ -281,7 +280,6 @@ sealed class GameActionBindings
     }
 }
 
-// ArtifactInfo 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class ArtifactInfo
 {
     public string Name;
@@ -330,7 +328,6 @@ sealed class Property
     public long Field;
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader : IDisposable
 {
     Memory M;
@@ -353,7 +350,6 @@ sealed partial class HealthReader : IDisposable
         }
     }
 
-    // 检查连接进程是否仍存活。
     public bool Alive
     {
         get
@@ -400,6 +396,7 @@ sealed partial class HealthReader : IDisposable
         }
     }
 
+    // 从已验证的名称池解析名称索引，并使用缓存减少重复内存读取。
     string Name(int id)
     {
         string s;
@@ -473,13 +470,11 @@ sealed partial class HealthReader : IDisposable
         throw new Exception("找不到游戏属性：" + name);
     }
 
-    // 返回已校验反射属性的偏移，未知字段不能用猜测常量代替。
     int Offset(Identity o, string n, int size)
     {
         return Prop(o.Class, n, size).Offset;
     }
 
-    // 读取 UObject 的地址/类/索引/序列等身份信息，用于抵抗对象地址复用。
     Identity Token(long a)
     {
         byte[] b = M.Read(a, 40);
@@ -569,6 +564,7 @@ sealed partial class HealthReader : IDisposable
         local = found[0];
     }
 
+    // 遍历已验证稀疏容器布局，限制数量并跳过未分配槽。
     List<long> SparseElements(long header, int stride, int limit)
     {
         long data = M.Q(header);
@@ -585,7 +581,6 @@ sealed partial class HealthReader : IDisposable
         return rows;
     }
 
-    // 读取实际游戏键位配置，支持键盘与手柄路由而不创建虚拟手柄。
     public GameActionBindings GameBindings()
     {
         if (!Valid(local))
@@ -657,7 +652,6 @@ sealed partial class HealthReader : IDisposable
         return result;
     }
 
-    // 返回当前本地玩家 Pawn，并重新验证关卡/对象归属。
     Identity Pawn()
     {
         if (process.HasExited || !Valid(local))
@@ -718,7 +712,6 @@ sealed partial class HealthReader : IDisposable
         };
     }
 
-    // 读取已反射验证的结构字段，不对未知布局直接转换。
     long Struct(string name, int size)
     {
         long c;
@@ -746,7 +739,6 @@ sealed partial class HealthReader : IDisposable
         return false;
     }
 
-    // 读取药水充能值，未知/无效状态不能认定药水已就绪。
     float PotionCharges()
     {
         Identity pawn = Pawn(), asc = Token(M.Q(pawn.Address + Offset(pawn, "AbilitySystemComponent", 8)));
@@ -855,7 +847,6 @@ sealed partial class HealthReader : IDisposable
         };
     }
 
-    // 读取法器身份和灵魂消耗，用于预算及槽位显示。
     public ArtifactInfo Artifact(int slot)
     {
         if (slot < 0 || slot > 2)

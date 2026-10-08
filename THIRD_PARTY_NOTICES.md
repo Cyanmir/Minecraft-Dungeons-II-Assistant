@@ -39,6 +39,8 @@ SOFTWARE.
 
 
 
-## Optional local equipment presentation
+## Equipment presentation resources
 
-Extracted game artwork, localization catalogs, game SDK binaries and private diagnostics are not included in this repository or its public release. The equipment list works with built-in interface labels and type names. A separately supplied local `equipment-presentation.bin.gz` may be loaded from the application directory; it remains subject to its original owners’ rights and is excluded from Git.
+Selected original equipment artwork, rarity UI textures and game localization are supplied through the project owner's separate resource repository: https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant-Resources . These game resources remain the property of Mojang / Microsoft and their respective rights holders; the MCD2A MIT license does not relicense them. The resource repository retains its own third-party notice. No full game extraction, game SDK binaries, personal saves or private diagnostics are included in this main repository.
+
+The equipment list can use built-in interface labels and type names when resources are unavailable. A separately supplied local `equipment-presentation.bin.gz` remains compatible and subject to its original owners' rights; personal packs are excluded from Git. The new blacksmith reader component also uses NeoRune 0.3.1 under the retained notice above.

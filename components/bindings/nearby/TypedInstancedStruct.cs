@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// NeoRune 编译期绑定：读取 InstancedStruct 中的原生交互重定向数据。
+// NeoRune 编译期绑定：读取 InstancedStruct 中的原生交互重定向数据。不能凭猜测换成另一结构类型；绑定只描述已有原生 thunk，不注入新的 C# 游戏运行时。
 using NeoRune;
 using UE.CoreUObject;
 using UE.Engine;

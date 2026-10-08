@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 
-// CombatGeometry 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatGeometry
 {
     public bool Known, ActiveWindow, CurrentOverlap;
@@ -16,7 +15,6 @@ sealed class CombatGeometry
     public long PoseAgeFrames;
 }
 
-// ContactGeometry 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 static class ContactGeometry
 {
     // 排除 NaN 和无穷大，避免无效遥测参与距离或时间比较。
@@ -25,7 +23,6 @@ static class ContactGeometry
         return !Double.IsNaN(value) && !Double.IsInfinity(value);
     }
 
-    // 计算向量点积，用于最近点和接触距离。
     static double Dot(ThreatVector a, ThreatVector b)
     {
         return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
@@ -37,7 +34,6 @@ static class ContactGeometry
         return Math.Max(0, Math.Min(1, x));
     }
 
-    // 计算点/线段间最近距离，处理退化线段。
     public static double Distance(ThreatVector a, ThreatVector b, ThreatVector c, ThreatVector d, out ThreatVector attackPoint)
     {
         attackPoint = new ThreatVector();
@@ -123,11 +119,9 @@ static class ContactGeometry
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     readonly Dictionary<string, Identity> geometryFunctions = new Dictionary<string, Identity>();
-    // BoneLayout 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     sealed class BoneLayout
     {
         public int World, PoseIndex, PoseArray, ReferenceSkeleton, NameMap, SocketSlot, ReferenceSlot;
@@ -176,7 +170,6 @@ sealed partial class HealthReader
         return fn;
     }
 
-    // 记录骨骼函数的来源与模块相对地址。
     void RecordGeometryCode(string name, long fn, byte[] code, string source)
     {
         AdaptationRecord.Set("function.geometry." + name, source + "; RVA=0x" + (fn - process.MainModule.BaseAddress.ToInt64()).ToString("X") + "; bytes=" + BitConverter.ToString(code).Replace('-', ' '));
@@ -219,6 +212,7 @@ sealed partial class HealthReader
         frameCounter = found.First();
     }
 
+    // 唯一解析并缓存已验证骨骼容器布局。
     BoneLayout GetBoneLayout(Identity mesh, Identity asset)
     {
         string key = mesh.Class + ":" + asset.Class;

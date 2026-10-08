@@ -9,14 +9,12 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 // 回执只确认数量。物品从背包消失不作为组件出售的依据。
-// EquipmentVisualRow 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class EquipmentVisualRow
 {
     public EquipmentDecision Decision;
     public bool Departed;
 }
 
-// EquipmentVisualState 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class EquipmentVisualState
 {
     public readonly List<EquipmentVisualRow> Rows = new List<EquipmentVisualRow>();
@@ -69,7 +67,6 @@ sealed class EquipmentVisualState
             Rows.Remove(row);
     }
 
-    // 处理匹配的回执计数，拒绝倒退或跨实例污染。
     public void Receipt(int sold, int pending, string status)
     {
         if (sold < 0 || pending < 0 || (HasReceipt && sold < Confirmed))
@@ -102,7 +99,6 @@ sealed class EquipmentVisualList : Control
         };
     }
 
-    // 根据当前视口和行高计算可见装备行数。
     List<EquipmentVisualRow> VisibleRows()
     {
         return State == null ? new List<EquipmentVisualRow>() : State.Rows.Where(r => Filter == 0 || (Filter == 1 && !r.Departed && r.Decision.Sell) || (Filter == 2 && !r.Departed && !r.Decision.Sell) || (Filter == 3 && r.Departed)).OrderBy(r => r.Departed ? 1 : r.Decision.Sell ? 0 : 2).ThenBy(r => r.Decision.Item.Category).ThenBy(r => r.Decision.Item.Type, StringComparer.Ordinal).ThenBy(r => r.Decision.Item.Id, StringComparer.Ordinal).ToList();
@@ -156,13 +152,11 @@ sealed class EquipmentVisualList : Control
             RefreshRows();
     }
 
-    // 读取当前语言对应的列表列名或状态词。
     internal static string Caption(EquipmentVisualRow row)
     {
         return row.Departed ? L10n.T("已离开背包") : row.Decision.Sell ? L10n.T("符合回收规则") : ToolboxForm.EquipmentReasonCaption(row.Decision.Reason);
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         OreTheme.Fill(e.Graphics, ClientRectangle, OreTheme.Card);
@@ -189,13 +183,8 @@ sealed class EquipmentVisualList : Control
             OreTheme.Fill(e.Graphics, new Rectangle(0, y, width, RowHeight - 2), i % 2 == 0 ? OreTheme.Card : Color.FromArgb(15, 33, 40));
             OreTheme.Fill(e.Graphics, new Rectangle(0, y + 4, 3, RowHeight - 10), color);
             string name = EquipmentGamePresentation.Name(item);
-            var icon = EquipmentGamePresentation.Icon(item);
             int iconSize = Math.Max(28, RowHeight - 10);
-            OreTheme.Fill(e.Graphics, new Rectangle(10, y + 5, iconSize, iconSize), OreTheme.Field);
-            if (icon != null)
-                e.Graphics.DrawImage(icon, new Rectangle(10, y + 5, iconSize, iconSize));
-            else
-                PixelText.Draw(e.Graphics, "?", new Rectangle(10, y + 5, iconSize, iconSize), OreTheme.Muted, scale, true, false, false);
+            EquipmentRarityFrame.Draw(e.Graphics, item, new Rectangle(10, y + 5, iconSize, iconSize));
             int textX = iconSize + 20;
             PixelText.Draw(e.Graphics, name, new Rectangle(textX, y + 5, split - textX - 10, RowHeight / 2 - 4), OreTheme.Text, scale, false, false, false);
             string detail = ToolboxForm.EquipmentCategoryCaption(item.Category) + " / " + (item.Rarity >= EquipmentRarity.Common && item.Rarity <= EquipmentRarity.Unique ? ToolboxForm.EquipmentRarityCaption(item.Rarity) : "?") + " / " + item.Power;
@@ -220,7 +209,6 @@ sealed class EquipmentVisualList : Control
         return keyData == Keys.Down || keyData == Keys.Up || keyData == Keys.PageDown || keyData == Keys.PageUp || base.IsInputKey(keyData);
     }
 
-    // 处理控件的方向键、提交或取消操作。
     protected override void OnKeyDown(KeyEventArgs e)
     {
         int delta = e.KeyCode == Keys.Down ? 1 : e.KeyCode == Keys.Up ? -1 : e.KeyCode == Keys.PageDown ? scrollbar.PageSize : e.KeyCode == Keys.PageUp ? -scrollbar.PageSize : 0;
@@ -234,14 +222,12 @@ sealed class EquipmentVisualList : Control
         base.OnKeyDown(e);
     }
 
-    // 处理按下位置并更新控件交互状态，不发送游戏输入。
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
         base.OnMouseDown(e);
     }
 
-    // 根据当前拖动状态更新控件值或悬停位置。
     protected override void OnMouseMove(MouseEventArgs e)
     {
         var rows = VisibleRows();
@@ -272,7 +258,6 @@ sealed class EquipmentVisualList : Control
 }
 
 // 独立读取句柄把昂贵查找移出 UI/心跳；只有此采样器使用句柄，快照和释放在此串行协调。
-// EquipmentVisualSampler 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class EquipmentVisualSampler : IDisposable
 {
     readonly object gate = new object ();
@@ -352,10 +337,8 @@ sealed partial class ToolboxForm
         return EquipmentGamePresentation.Rarity(rarity);
     }
 
-    // 创建装备行列表及状态区，绑定只读展示数据。
     void BuildEquipmentVisual()
     {
-        // 设置先于执行，清单跟在预览操作之后；只改容器位置，不改采样和回执。
         var card = StatusCard(pages[5], 1382, 428);
         LabelAt(card, L10n.T("回收清单与进度"), 20, 16, 704, 30);
         equipmentVisualSummary = (PixelLabel)LabelAt(card, "", 20, 55, 704, 38);
@@ -477,4 +460,3 @@ sealed partial class ToolboxForm
     }
 
 }
-

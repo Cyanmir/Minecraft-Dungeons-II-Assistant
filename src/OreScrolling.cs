@@ -20,7 +20,6 @@ sealed class OreScrollBar : Control
         Cursor = Cursors.Hand;
     }
 
-    // 根据可见比例计算滚动条滑块像素高度。
     int ThumbHeight
     {
         get
@@ -29,7 +28,6 @@ sealed class OreScrollBar : Control
         }
     }
 
-    // 根据滚动值计算滑块的像素位置。
     int ThumbY
     {
         get
@@ -38,7 +36,6 @@ sealed class OreScrollBar : Control
         }
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         int px = Math.Max(1, (int)Math.Round(2 * OreMetrics.Scale(this)));
@@ -49,7 +46,6 @@ sealed class OreScrollBar : Control
         OreRenderer.Rim(e.Graphics, Rectangle.Inflate(thumb, -px, -px), dragging ? OreTheme.LightHover : OreTheme.Light, OreTheme.LightHover, OreTheme.Muted, px);
     }
 
-    // 处理按下位置并更新控件交互状态，不发送游戏输入。
     protected override void OnMouseDown(MouseEventArgs e)
     {
         if (e.Y >= ThumbY && e.Y <= ThumbY + ThumbHeight)
@@ -64,7 +60,6 @@ sealed class OreScrollBar : Control
         base.OnMouseDown(e);
     }
 
-    // 根据当前拖动状态更新控件值或悬停位置。
     protected override void OnMouseMove(MouseEventArgs e)
     {
         if (dragging && Changed != null)

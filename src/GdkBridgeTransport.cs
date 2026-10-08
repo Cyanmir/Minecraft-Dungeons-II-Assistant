@@ -14,7 +14,6 @@ using System.Web.Script.Serialization;
 static class GdkBridgeTransport
 {
     internal const string RejectedCommand = "M2?";
-    // Pair 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     internal sealed class Pair
     {
         internal string Request, Receipt, Mod, Protocol, Root;
@@ -27,7 +26,6 @@ static class GdkBridgeTransport
         public double Clock;
     }
 
-    // Root 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     internal static string Root
     {
         get
@@ -115,11 +113,17 @@ static class GdkBridgeTransport
             prefix = "MCD2NearbyLoot";
             protocol = "5";
         }
+        else if (mod == "MCD2RerollBridge")
+        {
+            // 铁匠协议 4 沿用同一固定槽写入和 probe/OFF 握手；不触及角色存档。
+            prefix = "MCD2Reroll";
+            protocol = "7";
+        }
         else
-            throw new Exception("GDK write probe is restricted to the two captured components");
+            throw new Exception("Unsupported GDK mailbox component");
         if (protocolOverride != null)
         {
-            if (mod == "MCD2CombatBridge" && protocolOverride != "5" || mod == "MCD2NearbyLootBridge" && protocolOverride != "6")
+            if (mod == "MCD2CombatBridge" && protocolOverride != "5" || mod == "MCD2NearbyLootBridge" && protocolOverride != "6" || mod == "MCD2RerollBridge" && protocolOverride != "7")
                 throw new Exception("Unsupported fixed mailbox protocol");
             protocol = protocolOverride;
         }
@@ -219,6 +223,7 @@ static class GdkBridgeTransport
         return ReadReceipt(pair);
     }
 
+    // 从已验证私有回执字段读取状态。
     internal static Receipt ReadReceipt(Pair pair)
     {
         GdkSaveStorage.RequireContained(pair.Receipt, pair.Root);
@@ -332,102 +337,6 @@ static class GdkBridgeTransport
         }
 
         throw new Exception("GDK component did not acknowledge " + status + "; " + (last == null ? "receipt status did not change" : last.Message));
-    }
-
-    // 生成或发送独立无玩法探针，验证通信后恢复 OFF。
-    internal static object Probe(string root, string mod, DateTime start, string output)
-    {
-        var result = new Dictionary<string, object>
-        {
-            {
-                "component",
-                mod
-            },
-            {
-                "requestWritten",
-                false
-            },
-            {
-                "acknowledged",
-                false
-            },
-            {
-                "restoredOff",
-                false
-            },
-            {
-                "disabledAcknowledged",
-                false
-            },
-            {
-                "testPassed",
-                false
-            }
-        };
-        Pair pair = null;
-        Receipt initial = null;
-        bool attempted = false;
-        byte[] backup = null;
-        try
-        {
-            pair = Resolve(root, mod);
-            initial = Fresh(pair, start);
-            result["before"] = initial;
-            if (initial.Status != "Disabled")
-                throw new Exception("Stop the toolbox with F9; component is not Disabled");
-            var current = Wait(pair, initial.Instance, "Disabled", initial.Clock, start, 2000);
-            if (current.Instance != initial.Instance)
-                throw new Exception("Component scene changed");
-            backup = Read(pair.Request, 65536);
-            FixedReplacement(backup, "OFF", RejectedCommand, mod);
-            string backupFile = mod + "-request-before.sav";
-            File.WriteAllBytes(Path.Combine(output, backupFile), backup);
-            result["requestBackup"] = backupFile;
-            var checkedPair = SamePair(pair);
-            var checkedReceipt = Fresh(checkedPair, start);
-            if (checkedReceipt.Instance != initial.Instance || checkedReceipt.Status != "Disabled")
-                throw new Exception("Component state changed before probe");
-            attempted = true;
-            WriteFixed(checkedPair, "OFF", RejectedCommand);
-            result["requestWritten"] = true;
-            // 已安装的两个 Poll 会先拒绝三字符命令，之后才可能解析动作、查找 Actor 或执行能力。
-            var rejected = Wait(pair, initial.Instance, "InvalidRequest", checkedReceipt.Clock, start, 2500);
-            result["afterRejectedCommand"] = rejected;
-            result["acknowledged"] = true;
-        }
-        catch (Exception e)
-        {
-            result["error"] = SafeError(e);
-        }
-        finally
-        {
-            if (attempted && pair != null)
-                try
-                {
-                    // 心跳停止也必须允许恢复本通道自己的无效命令；即使时间过期仍核对类、实例和内容。
-                    var current = SamePair(pair);
-                    var receipt = ReadReceipt(current);
-                    if (receipt.Instance != initial.Instance)
-                        throw new Exception("Scene changed; do not write into the new scene request");
-                    string value = EquipmentSaveCodec.Parse(Read(current.Request, 65536), "Request", "Command", mod).Value;
-                    if (value != "OFF" && InterruptedCommand(value))
-                        WriteFixed(current, value, "OFF");
-                    else if (value != "OFF")
-                        throw new Exception("Another command replaced the probe; do not overwrite it");
-                    result["restoredOff"] = true;
-                    if (!Read(current.Request, 65536).SequenceEqual(backup))
-                        throw new Exception("Restored request differs from the original bytes");
-                    result["afterRestore"] = Wait(current, initial.Instance, "Disabled", receipt.Clock, start, 2500);
-                    result["disabledAcknowledged"] = true;
-                }
-                catch (Exception e)
-                {
-                    result["restoreError"] = SafeError(e);
-                }
-        }
-
-        result["testPassed"] = (bool)result["requestWritten"] && (bool)result["acknowledged"] && (bool)result["restoredOff"] && (bool)result["disabledAcknowledged"] && !result.ContainsKey("restoreError");
-        return result;
     }
 
 }

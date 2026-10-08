@@ -23,13 +23,25 @@
 ```powershell
 dotnet build .\components\nearby\MCD2NearbyLootBridge.csproj
 dotnet build .\components\combat\MCD2CombatBridge.csproj
+dotnet build .\components\reroll\MCD2RerollBridge.csproj
 ```
 
 生成的 `.pak`、`.utoc`、`.ucas` 位于各组件的 `bin/NeoRune/Pak`。更新后复制到 `src/assets` 中对应的组件目录，再构建工具。组件构建不自动安装到游戏。
 
-`components/bindings` 声明 NeoRune 编译需要的原生反射信息。收集协议 6、战斗协议 5，与应用版本分别维护。
+`components/bindings` 声明 NeoRune 编译需要的原生反射信息。收集协议 6、战斗协议 5、铁匠协议 7，与应用版本分别维护。
 
 装备回收沿用 `src/assets/equipment-component` 的预编译文件。本仓库不提供它的完整构建源码。
+
+## 效果索引
+
+`tools` 中的生成器从对应游戏版本的本地数据表导出分类和数字等级索引：
+
+```powershell
+python tools/build-reroll-categories.py DT_EffectTemplateDefinition.json src/assets/reroll-display-categories.json --game-build 1.1.2.0
+python tools/build-reroll-levels.py DT_EffectTemplateDefinition.json src/assets/reroll-effect-levels.json --game-build 1.1.2.0
+```
+
+分类根据模板 Traits，数字等级根据普通模板的 Tier 引用。生成结果保留来源哈希；输入表不提交到仓库。
 
 ## 发行包
 

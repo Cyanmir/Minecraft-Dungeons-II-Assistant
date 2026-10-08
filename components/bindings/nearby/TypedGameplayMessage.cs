@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// NeoRune 编译期绑定：将原生玩法消息的 wildcard payload 声明为已核实食物消息类型。
+// NeoRune 编译期绑定：将原生玩法消息的 wildcard payload 声明为已核实食物消息类型。修改时核对反射函数路径和 payload 布局，消息消耗证据应与目标 Actor 对应。
 using NeoRune;
 using UE.GameplayMessageRuntime;
 using UE.SpicewoodGAS;

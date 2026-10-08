@@ -16,7 +16,6 @@ using System.Web.Script.Serialization;
 static class NativeCombatCatalog
 {
     static readonly HashSet<string> allowed = Load();
-    // 根据已拆包的原生特性选择不需要敌人瞄准的法器；不能把瞄准型法器对着玩家激活。
     static readonly HashSet<string> selfAllowed = LoadSelf();
     static HashSet<string> LoadSelf()
     {
@@ -54,6 +53,7 @@ static class NativeCombatCatalog
 
 static class NativeCombatRule
 {
+    // 选出原生距离内可近战的已验证敌人。
     public static CombatTarget AttackTarget(CombatState state, int range, bool encounter = false)
     {
         return state != null && state.CanAttempt && state.PlayerVelocity.Valid && (encounter || state.PlayerVelocity.Length <= 30) ? state.Targets.Where(t => t.Distance <= range && Math.Abs(t.Position.Z - state.Player.Z) <= 100 && !String.IsNullOrEmpty(t.ActorName) && !String.IsNullOrEmpty(t.Type)).OrderBy(t => t.Distance).FirstOrDefault() : null;
@@ -122,7 +122,6 @@ sealed class CombatBridge
         };
     }
 
-    // 检查单个协议字段，拒绝分隔符或超长内容造成的消息歧义。
     static string Field(string v)
     {
         if (String.IsNullOrEmpty(v) || v.Length > 160 || v.Any(c => c < ' ' || c > 126 || c == '|'))
@@ -151,7 +150,6 @@ sealed class CombatBridge
         Write(lastCommand);
     }
 
-    // 检查当前动作是否仍在等待对应回执。
     public static bool Pending(string status)
     {
         return status == "Dispatched" || status == "Holding" || status == "TargetSubmitted" || status == "ReleaseRequested";
@@ -184,12 +182,12 @@ sealed class CombatBridge
         return r.Instance == instance && r.Epoch == epoch && r.Sequence == sequence;
     }
 
-    // 写入本组件的自有通信数据；不能写入角色存档。
     void Write(string value)
     {
         channel.Write(value);
     }
 
+    // 终止本工具拥有的请求并恢复禁用命令，清理未完成状态。
     public void Stop()
     {
         lastCommand = null;
@@ -214,6 +212,9 @@ sealed partial class ToolboxForm
     // 手柄恢复始终走组件；其他请求仍按用户原生模式和前后台作用域决定。
     bool NativeRequestRoute(InputRequest request)
     {
+        // 前台键鼠组合是一键同时按下全部当前游戏槽位键，与自动战斗的原生模式独立。
+        // 后台和手柄保留组件逐槽执行，绝不向其他应用发送全局按键。
+        if (request.Hotbar && !request.Controller && GameForeground()) return false;
         return UseNativeCombat || request.Controller && (request.Healing || request.Threat || request.Hotbar);
     }
 
@@ -340,11 +341,10 @@ sealed partial class ToolboxForm
             {
                 // 人工组合使用 ComboSlots，不借用自动恢复的 AutoSlots；成本逐槽读取，空自动选择不阻断组合。
                 eligible = settings.ComboKeys();
-                if (action == 3 || !settings.ComboSlots[action] || !cooldowns[action].Ready)
+                if (action == 3 || !settings.ComboSlots[action])
                     continue;
-                float cost = reader.Artifact(action).Cost;
-                if (float.IsNaN(cost) || float.IsInfinity(cost) || cost < 0 || !(sample[2] >= cost))
-                    continue;
+                // 组合费用由原生能力核对，不依赖 UI 费用文字。
+                // 一次触发遍历全部勾选槽位，各槽仅请求一次，不因一个不可用槽位中断其余槽位。
             }
             else if (request.Threat)
             {

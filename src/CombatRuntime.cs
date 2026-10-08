@@ -10,7 +10,6 @@ using System.Web.Script.Serialization;
 using System.IO;
 using System.Text;
 
-// CombatTarget 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatTarget
 {
     public string Id, Name, ActorName, Type;
@@ -60,7 +59,6 @@ sealed class CombatCamera
         return true;
     }
 
-    // 计算三维点积，供摄像机基向量投影使用。
     static double Dot(ThreatVector a, ThreatVector b)
     {
         return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
@@ -73,7 +71,6 @@ sealed class CombatCamera
     }
 }
 
-// CombatState 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class CombatState
 {
     // 只读原生属性；未知时显示等待，不把工具筛选上限当成武器攻击距离。
@@ -144,10 +141,8 @@ static class CombatActionRule
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
-    // 读取当前玩家摄像机和视口数据，拒绝缺失/失配投影。
     CombatCamera ReadCombatCamera(Identity player)
     {
         Identity controller = Token(M.Q(local.Address + Offset(local, "PlayerController", 8)));

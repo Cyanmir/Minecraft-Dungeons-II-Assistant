@@ -126,6 +126,7 @@ sealed partial class ToolboxForm
     {
         if (equipmentSwitching)
             return;
+        if (on && (RerollRunning || rerollStarting)) StopRerollObservation();
         if (!on)
         {
             StopEquipment();

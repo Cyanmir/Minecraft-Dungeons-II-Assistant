@@ -22,6 +22,7 @@ class OreButton : Button
     public float PixelScale = 1.15f;
     // 仅主侧栏设置图标编号；下拉菜单不占图标列。
     public int IconIndex = -1;
+    public Image ContentIcon;
     bool hover, pressed;
     // 只绑定视觉状态；业务 Click 由原有页面构造器绑定一次。
     public OreButton()
@@ -80,7 +81,6 @@ class OreButton : Button
         base.OnKeyDown(e);
     }
 
-    // 释放键盘按下态。
     protected override void OnKeyUp(KeyEventArgs e)
     {
         pressed = false;
@@ -88,7 +88,6 @@ class OreButton : Button
         base.OnKeyUp(e);
     }
 
-    // 渲染 OreUI 四种按钮和导航；不参与业务调度。
     protected override void OnPaint(PaintEventArgs e)
     {
         int px = OreMetrics.Pixel(this, 2, OreMetrics.ControlHeight);
@@ -119,6 +118,16 @@ class OreButton : Button
             bounds.Width -= px * 15;
         }
 
+        if (ContentIcon != null)
+        {
+            int size = Math.Max(1, Math.Min(Height - px * 6, px * 14));
+            var state = e.Graphics.Save();
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+            e.Graphics.DrawImage(ContentIcon, new Rectangle(bounds.Left, (Height - size) / 2 - px, size, size));
+            e.Graphics.Restore(state);
+            bounds.X += size + px * 3; bounds.Width -= size + px * 3;
+        }
         if (FixedTypography)
             PixelText.DrawMenu(e.Graphics, Text, bounds);
         else if (Navigation)
@@ -139,6 +148,7 @@ class OreButton : Button
             "0000000000/0111111100/0100000100/0101100100/0111111100/0101100100/0100000100/0111111100/0000000000/0000000000",
             "0000001100/0000011100/0000111000/0001110000/0011100000/0111000000/0011000000/0100100000/1000010000/0000000000",
             "0010010000/0111111000/1111111100/0111111000/0011110000/0011110000/0011110000/0011110000/0000000000/0000000000",
+            "0001111000/0010000100/0100000010/1100000010/1110000010/0000000111/0100000011/0100000010/0010000100/0001111000",
             "0001100000/0111111000/0111111000/1110011100/1110011100/0111111000/0111111000/0001100000/0000000000/0000000000"
         };
         if (IconIndex >= shapes.Length)

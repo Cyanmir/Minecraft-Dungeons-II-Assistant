@@ -4,9 +4,9 @@
 
 # Minecraft Dungeons II Assistant
 
-**MCD2A · Minecraft Dungeons II 游戏助手 · 1.1.2**
+**MCD2A · Minecraft Dungeons II 游戏助手 · 1.2.0**
 
-[![Version](https://img.shields.io/badge/version-1.1.2-4bb5c5)](https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant/releases/tag/1.1.2)
+[![Version](https://img.shields.io/badge/version-1.2.0-4bb5c5)](https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant/releases/tag/1.2.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078d4)](#系统要求)
 [![License](https://img.shields.io/badge/license-MIT-6b8e9e)](LICENSE)
 
@@ -37,7 +37,8 @@ Windows x64，支持 Steam / Win64 和 Xbox PC / Microsoft Store / WinGDK。
 | 附近交互 | 拾取装备、附魔书和 TNT，开箱、食用和破罐；可设置交互间隔 |
 | 自动战斗 | 攻击附近敌人，提前使用法器，辅助闪避 |
 | 装备整理（实验） | 按保护规则整理装备，保留锁定、收藏和受保护物品 |
-| 操作辅助 | 法器组合、跳劈辅助、右键闪避 |
+| 自动刷词条 | 为每件装备设置效果和等级，按队列依次刷新，限制次数与花费 |
+| 操作辅助 | 一键法器组合、跳劈辅助、右键定向闪避 |
 
 ## 构建
 
@@ -61,4 +62,5 @@ Windows x64，支持 Steam / Win64 和 Xbox PC / Microsoft Store / WinGDK。
 | --- | --- |
 | [Cyanmir](https://github.com/Cyanmir) | 项目维护与功能开发 |
 | [3035936740](https://github.com/3035936740) | 测试与反馈 |
+| [Jackdwh](https://github.com/Jackdwh) | Xbox PC / Microsoft Store / WinGDK 平台测试与反馈 |
 | [OpenAI Codex](https://openai.com/codex/) | AI 辅助开发、排查与文档整理 |

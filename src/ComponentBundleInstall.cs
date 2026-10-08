@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-// 三类组件共享一次预检、备份和安装；装备组件始终使用内嵌预编译资源。
+// 四类组件共享一次预检、备份和安装；装备组件始终使用内嵌预编译资源。
 static class ComponentBundleInstaller
 {
     // 组件名与内嵌资源和 ~mods 目录一致；新增类型须同步三件套、归属和回滚计划。
@@ -17,7 +17,9 @@ static class ComponentBundleInstaller
     {
         "MCD2NearbyLootBridge",
         "MCD2CombatBridge",
-        "MCD2EquipmentBridge"
+        "MCD2EquipmentBridge",
+        // 新增独立铁匠读取/原生刷新组件；出售三件套保持原样，不能借出售协议执行刷新。
+        "MCD2RerollBridge"
     };
     static readonly string[] Extensions =
     {
@@ -25,7 +27,6 @@ static class ComponentBundleInstaller
         ".utoc",
         ".ucas"
     };
-    // 记录本工具拥有的文件哈希；缺失或外部修改时保留文件并停止覆盖。
     const string Manifest = "toolbox-component.json";
     // 保存每个组件的安装计划及旧内容，失败时同时恢复文件和归属清单。
     sealed class Plan
@@ -135,7 +136,7 @@ static class ComponentBundleInstaller
         }
     }
 
-    // 一次安装收集、战斗、装备组件；加载器由原有官网获取流程处理。
+    // 一次安装收集、战斗、装备与铁匠组件；加载器由原有官网获取流程处理。
     public static string Install(string root, Action ensureLoader = null)
     {
         root = GameProcess.InstallRoot(root, Directory.Exists, File.Exists);

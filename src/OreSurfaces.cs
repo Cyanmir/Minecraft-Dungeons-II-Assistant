@@ -18,7 +18,6 @@ class OreCard : Panel
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -58,7 +57,6 @@ sealed class OreHealthBar : Control
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         OreTheme.Fill(e.Graphics, ClientRectangle, OreTheme.Line);
@@ -70,7 +68,6 @@ sealed class OreHealthBar : Control
 // 普通设置分组只有底部分隔线；继承容器接口以保持原有布局和事件绑定。
 sealed class OreSection : OreCard
 {
-    // 设置分组使用页面背景和底部细线，不绘制状态卡片边框。
     public OreSection()
     {
         Section = true;

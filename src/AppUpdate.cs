@@ -34,7 +34,6 @@ sealed class UpdateRelease
     public bool prerelease { get; set; }
     public UpdateAsset[] assets { get; set; }
 }
-// 检查结果同时带有版本、通道与发行包哈希；安装前不再猜测下载文件名称。
 sealed class AppUpdateOffer
 {
     // Channel：0 正式、1 Dev；Different 按 EXE 字节哈希判断，支持同版本手动覆盖。
@@ -44,7 +43,6 @@ sealed class AppUpdateOffer
     public UpdateAsset Asset;
     public bool Different;
 }
-// 更新计划仅保存本次允许替换的文件；不遍历游戏目录或用户配置目录。
 sealed class AppUpdateFile
 {
     // Source 相对暂存 payload，Destination 相对工具目录；Existed/Touched 仅供回滚记录使用。

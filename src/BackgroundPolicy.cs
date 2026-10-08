@@ -59,6 +59,8 @@ sealed partial class ToolboxForm
     // 修改工具设置时不触发组合、跳劈或右键操作；其他应用内快捷键仍可触发后台游戏动作。
     bool ShortcutScope()
     {
-        return GameScope() && Form.ActiveForm == null && !ToolboxInput.Modifiers();
+        // 鼠标监听有独立消息线程，不能用线程局部的 ActiveForm 判定工具是否在前台。
+        // 直接核对窗口所属 PID，也覆盖本工具的详情、设置及对话框。
+        return GameScope() && !ToolboxInput.Front(ToolboxInput.ToolProcessId) && !ToolboxInput.Modifiers();
     }
 }

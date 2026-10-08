@@ -36,7 +36,6 @@ static class AdaptationRecord
         }
     }
 
-    // 生成当前模块的可读文本，供界面或导出报告使用。
     public static string Contents()
     {
         lock (gate)

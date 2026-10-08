@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 保存有限长度的动作日志和脱敏诊断快照。
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -64,7 +63,6 @@ sealed class DiagnosticLog : IDisposable
             pending.Dequeue();
     }
 
-    // 记录一个带时间/类别的动作事件。
     public void Record(string category, string message)
     {
         lock (gate)
@@ -107,7 +105,6 @@ sealed class DiagnosticLog : IDisposable
         }
     }
 
-    // 生成本次运行日志名，应用名为 MCD2A。
     string FileName(int index)
     {
         return Path.Combine(folder, index == 0 ? "session.log" : "session." + index + ".log");
@@ -157,7 +154,6 @@ sealed class DiagnosticLog : IDisposable
         }
     }
 
-    // 导出配置/遥测及近期记录，输出不自动上传。
     public void Export(string destination, string snapshot)
     {
         string target = Path.GetFullPath(destination);
@@ -246,7 +242,6 @@ static class ToolboxLog
         Write("Session", "Started");
     }
 
-    // 写入本组件的自有通信数据；不能写入角色存档。
     public static void Write(string category, string text)
     {
         if (current != null)
@@ -267,13 +262,11 @@ static class ToolboxLog
             current.Limited(category, text);
     }
 
-    // 记录经过脱敏的异常和上下文。
     public static void Error(string category, Exception error)
     {
         Limited(category, error.ToString());
     }
 
-    // 导出配置/遥测及近期记录，输出不自动上传。
     public static void Export(string path, string snapshot)
     {
         if (current == null)
@@ -281,6 +274,7 @@ static class ToolboxLog
         current.Export(path, snapshot);
     }
 
+    // 终止本工具拥有的请求并恢复禁用命令，清理未完成状态。
     public static void Stop()
     {
         if (current != null)

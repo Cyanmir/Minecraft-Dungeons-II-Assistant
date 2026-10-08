@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// 游戏端附近交互 Actor：轮询独立请求槽，调用已授予的原生能力并观察真实结果。
+// 游戏端附近交互 Actor：轮询独立请求槽，调用已授予的原生能力并观察真实结果。保持 Request/Receipt 类名、存档槽和协议 6 与工具端一致；不生成物品、不发奖励、不移动鼠标或自动寻路。
 using System.Collections.Generic;
 using NeoRune;
 using UE.Engine;

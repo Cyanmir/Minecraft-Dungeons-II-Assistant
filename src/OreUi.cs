@@ -45,7 +45,6 @@ static class MinecraftText
         }
     }
 
-    // HeadingName 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     public static string HeadingName
     {
         get
@@ -54,7 +53,6 @@ static class MinecraftText
         }
     }
 
-    // BodyName 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     public static string BodyName
     {
         get
@@ -63,7 +61,6 @@ static class MinecraftText
         }
     }
 
-    // 计算当前字体的像素高度，布局变更应复用测量结果。
     public static float Height(float scale)
     {
         return InkFor(FontFor(false, scale)).Height;
@@ -75,13 +72,11 @@ static class MinecraftText
         return text.Replace("→", "->").Replace("·", "/").Replace("−", "-").Replace("’", "'").Replace("“", "\"").Replace("”", "\"");
     }
 
-    // 检查字形是否可绘制，必要时交给回退字体。
     public static bool CanDraw(string text)
     {
         return Normalize(text).All(c => c <= 255 || c == '\n' || c == '\r');
     }
 
-    // 创建文本布局格式，调用者负责正确释放。
     static StringFormat Format()
     {
         var format = (StringFormat)StringFormat.GenericTypographic.Clone();
@@ -131,7 +126,6 @@ static class MinecraftText
         }
     }
 
-    // 计算字符的排版前进宽度，空白与 CJK 分开处理。
     static float Advance(Graphics graphics, char value, Font font, StringFormat format)
     {
         string key = font.FontFamily.Name + font.Size + ":" + value;
@@ -165,10 +159,17 @@ static class MinecraftText
         }
     }
 
-    // 读取实际字形高度，用于垂直居中。
     public static int InkHeight(float scale, bool title)
     {
         return InkFor(FontFor(title, scale)).Height;
+    }
+
+    // 与 Draw 共用字距和字体；装备力量靠右排版时不能用 CJK 字宽猜测或裁掉末位。
+    internal static int LineWidth(Graphics graphics, string text, float scale, bool title)
+    {
+        using (var format = Format())
+            return (int)Math.Ceiling(Measure(graphics, Normalize(text), FontFor(title, scale), format,
+                title ? 0 : .1f * scale, title ? 3 * scale : 1.5f * scale));
     }
 
     // 在给定矩形绘制文本，遵守裁剪、字体和语言设置。
@@ -260,7 +261,7 @@ static class PixelText
     }
 
     // 用对应 CJK 字体绘制中日韩文字。
-    public static void DrawCjk(Graphics g, string text, Rectangle bounds, Color color, float scale, bool center, bool wrap, bool shadow, bool heading, bool vertical = false)
+    public static void DrawCjk(Graphics g, string text, Rectangle bounds, Color color, float scale, bool center, bool wrap, bool shadow, bool heading, bool vertical = false, bool flushLeft = false)
     {
         using (var font = new Font(CjkFamily(L10n.Language, heading), Math.Max(13, 16 * scale), FontStyle.Regular, GraphicsUnit.Pixel))
         using (var brush = new SolidBrush(color))
@@ -271,12 +272,20 @@ static class PixelText
             format.Trimming = StringTrimming.EllipsisCharacter;
             if (!wrap)
                 format.FormatFlags |= StringFormatFlags.NoWrap;
+            // 大字号标题使用默认行高和裁剪规则，避免 GenericTypographic 在短矩形中隐藏整行。
+            // 仅补偿 DrawString 的 1/6 em 前导留白，不改变字体、换行方式或标签布局高度。
+            RectangleF textBounds = bounds;
+            if (flushLeft && !center)
+            {
+                float leadingPadding = font.Size / 6f;
+                textBounds.X -= leadingPadding;
+                textBounds.Width += leadingPadding;
+            }
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            g.DrawString(text, font, brush, bounds, format);
+            g.DrawString(text, font, brush, textBounds, format);
         }
     }
 
-    // 绘制菜单文本并保持选中/禁用颜色语义。
     public static void DrawMenu(Graphics g, string text, Rectangle bounds, bool center = false)
     {
         using (var font = new Font(CjkFamily(3), Math.Max(13, 14 * bounds.Height / 44f), FontStyle.Regular, GraphicsUnit.Pixel))
@@ -409,7 +418,7 @@ static class PixelText
     }
 
     // 在给定矩形绘制文本，遵守裁剪、字体和语言设置。
-    public static void Draw(Graphics g, string text, Rectangle bounds, Color color, float scale, bool center, bool wrap, bool shadow, bool heading = false)
+    public static void Draw(Graphics g, string text, Rectangle bounds, Color color, float scale, bool center, bool wrap, bool shadow, bool heading = false, bool flushLeft = false)
     {
         if (string.IsNullOrEmpty(text) || bounds.Width <= 0 || bounds.Height <= 0)
             return;
@@ -419,13 +428,15 @@ static class PixelText
             return;
         }
 
-        DrawCjk(g, text, bounds, color, scale, center, wrap, shadow, heading);
+        DrawCjk(g, text, bounds, color, scale, center, wrap, shadow, heading, false, flushLeft);
     }
 }
 
 sealed class PixelLabel : Label
 {
     public bool VerticalCenter;
+    // 对齐到内容边缘的标题去掉 GDI+ 随字号增加的左右留白，其他标签沿用原有格式。
+    public bool FlushLeft;
     public bool Wrap = true;
     public bool BrandHeading;
     public float PixelScale = 1, EnglishScale = 1;
@@ -442,7 +453,6 @@ sealed class PixelLabel : Label
     {
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         OreTheme.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Card : Parent.BackColor);
@@ -460,7 +470,7 @@ sealed class PixelLabel : Label
         Rectangle bounds = ClientRectangle;
         if (VerticalCenter && (!L10n.English || !MinecraftText.CanDraw(Text)))
         {
-            PixelText.DrawCjk(e.Graphics, Text, bounds, ForeColor, scale, Center, Wrap, Shadow, EnglishHeading, true);
+            PixelText.DrawCjk(e.Graphics, Text, bounds, ForeColor, scale, Center, Wrap, Shadow, EnglishHeading, true, FlushLeft);
             return;
         }
 
@@ -471,6 +481,6 @@ sealed class PixelLabel : Label
             bounds.Height = Height - bounds.Y;
         }
 
-        PixelText.Draw(e.Graphics, Text, bounds, ForeColor, scale, Center, Wrap, Shadow, EnglishHeading);
+        PixelText.Draw(e.Graphics, Text, bounds, ForeColor, scale, Center, Wrap, Shadow, EnglishHeading, FlushLeft);
     }
 }

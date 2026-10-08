@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Security.Cryptography;
 
-// GameLayout 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class GameLayout
 {
     public long Names, Objects;
@@ -123,7 +122,6 @@ static class GameProcess
 // 优先真实本地符号，特征仅用于定位数据，不调用游戏函数；所有来源的候选都经过同样名称/对象结构验证。
 static class GameLocator
 {
-    // Section 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     sealed class Section
     {
         public long Address;
@@ -178,7 +176,6 @@ static class GameLocator
         new Pattern("48 8B 05 ?? ?? ?? ?? 48 8B 0C C8 48 8D 1C D1"),
         new Pattern("48 8B 05 ?? ?? ?? ?? 48 8B 0C C8 8B 44 D1 08")
     };
-    // 计算 x64 指令的模块内相对引用地址，不直接调用该地址。
     static long Rip(byte[] code, int at, long address)
     {
         return checked(address + at + 7 + BitConverter.ToInt32(code, at + 3));
@@ -352,7 +349,6 @@ static class GameLocator
     }
 
     // 基础遥测可在文件指纹不可用时继续；不能把内存镜像哈希冒充 EXE 哈希或视为版本已核实。
-    // 计算当前游戏 EXE 指纹，供目录和适配范围校验。
     static string FileFingerprint(Func<Stream> open, out string status)
     {
         try
@@ -399,6 +395,9 @@ static class GameLocator
         string fingerprint = FileFingerprint(() => File.OpenRead(module.FileName), out fingerprintStatus);
         AdaptationRecord.Set("game.sha256", fingerprint);
         AdaptationRecord.Set("game.sha256.status", fingerprintStatus);
+        AdaptationRecord.Set("game.build", String.Equals(fingerprint, GameBuildCompatibility.Steam112, StringComparison.OrdinalIgnoreCase) ?
+            "Steam 1.1.2.0" :
+            String.Equals(fingerprint, GameBuildCompatibility.Steam111, StringComparison.OrdinalIgnoreCase) ? "previous Steam build" : "not in Steam compatibility table; GDK checked separately");
         if (fingerprint == "unavailable")
             ToolboxLog.Write("Reader.Fingerprint", fingerprintStatus + "; continuing validated read-only lookup");
         foreach (Pattern pattern in namePatterns)
@@ -503,13 +502,10 @@ sealed class LocalSymbols : IDisposable
     // 按名称查询真实存在的本地调试符号。
     [DllImport("dbghelp.dll", CharSet = CharSet.Ansi, SetLastError = true)]
     static extern bool SymFromName(IntPtr process, string name, IntPtr info);
-    // 设置符号解析选项，调用结束应恢复上下文。
     [DllImport("dbghelp.dll")]
     static extern uint SymSetOptions(uint options);
-    // 读取当前符号解析选项。
     [DllImport("dbghelp.dll")]
     static extern uint SymGetOptions();
-    // 释放本对象的符号查询上下文。
     [DllImport("dbghelp.dll")]
     static extern bool SymCleanup(IntPtr process);
     static readonly object gate = new object ();

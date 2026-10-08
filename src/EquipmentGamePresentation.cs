@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 装备名称、分类、稀有度和可选本地图标展示。
+// 装备译名、图标、品质纹理展示。
 // 游戏译文与图像继续属于原权利人。
 using System;
 using System.Collections.Generic;
@@ -15,9 +15,12 @@ using System.Text.RegularExpressions;
 
 static class EquipmentGamePresentation
 {
-    static readonly Dictionary<string, object> items, terms;
+    static Dictionary<string, object> items, terms;
     static readonly Dictionary<string, byte[]> icons = new Dictionary<string, byte[]>();
     static readonly Dictionary<string, Bitmap> thumbnails = new Dictionary<string, Bitmap>();
+    // 原始 UI 纹理保留尺寸，不能用装备 64×64 缩略图替代品质标记。
+    static readonly Dictionary<string, Bitmap> textures = new Dictionary<string, Bitmap>();
+    static Dictionary<string, string> uiTextures = new Dictionary<string, string>();
     static readonly string[] categories =
     {
         "Equipment_Melee",
@@ -32,55 +35,92 @@ static class EquipmentGamePresentation
     {
         items = new Dictionary<string, object>();
         terms = InterfaceTerms();
-        using (var source = PresentationSource())
-        {
-            if (source == null)
-                return;
-            using (var gz = new GZipStream(source, CompressionMode.Decompress))
-            using (var r = new BinaryReader(gz, Encoding.UTF8))
+        if (File.Exists(GameResources.CachePath))
+            try
             {
-                if (Encoding.ASCII.GetString(r.ReadBytes(4)) != "M2EQ")
-                    throw new Exception("Invalid equipment resource");
-                int size = r.ReadInt32();
-                if (size < 1 || size > 4000000)
-                    throw new Exception("Equipment manifest size invalid");
-                byte[] raw = r.ReadBytes(size);
-                if (raw.Length != size)
-                    throw new EndOfStreamException();
-                var data = (Dictionary<string, object>)new JavaScriptSerializer
-                {
-                    MaxJsonLength = 4000000
-                }.DeserializeObject(Encoding.UTF8.GetString(raw));
-                if ((string)data["format"] != "MCD2.EquipmentPresentation.v1")
-                    throw new Exception("Equipment manifest version invalid");
-                items = (Dictionary<string, object>)data["items"];
-                terms = (Dictionary<string, object>)data["terms"];
-                var hashes = (Dictionary<string, object>)data["iconSHA256"];
-                int count = r.ReadInt32();
-                if (count < 1 || count > 512)
-                    throw new Exception("Equipment icon count invalid");
-                for (int i = 0; i < count; i++)
-                {
-                    int length = r.ReadUInt16();
-                    if (length < 1 || length > 128)
-                        throw new Exception("Equipment icon name invalid");
-                    string key = Encoding.UTF8.GetString(r.ReadBytes(length));
-                    int bytes = r.ReadInt32();
-                    if (bytes < 1 || bytes > 2000000)
-                        throw new Exception("Equipment icon size invalid");
-                    byte[] png = r.ReadBytes(bytes);
-                    if (png.Length != bytes)
-                        throw new EndOfStreamException();
-                    using (var sha = System.Security.Cryptography.SHA256.Create())
-                        if (BitConverter.ToString(sha.ComputeHash(png)).Replace("-", "").ToLowerInvariant() != (string)hashes[key])
-                            throw new Exception("Equipment icon hash mismatch");
-                    icons.Add(key, png);
-                }
-
-                if (r.Read() != -1)
-                    throw new Exception("Trailing equipment resource data");
-                    }
+                using (var stream = File.OpenRead(GameResources.CachePath)) Apply(GameResourceCatalog.Read(stream));
+                return;
+            }
+            catch (Exception error) { ToolboxLog.Error("Resources.Cache", error); }
+        try
+        {
+            using (var source = PresentationSource())
+                if (source != null) Apply(GameResourceCatalog.Read(source));
         }
+        catch (Exception error) { ToolboxLog.Error("Resources.Local", error); }
+    }
+
+    internal static string Revision = "";
+    // 只在 UI 线程切换已完整校验的展示数据，释放旧缩略图；UID、回收规则、词条目录均不受影响。
+    internal static void Apply(GameResourceCatalog catalog)
+    {
+        foreach (var image in thumbnails.Values) image.Dispose();
+        thumbnails.Clear();
+        foreach (var texture in textures.Values) texture.Dispose();
+        textures.Clear();
+        uiTextures = catalog.UiTextures;
+        items = catalog.Items;
+        var merged = InterfaceTerms();
+        foreach (var term in catalog.Terms) merged[term.Key] = term.Value;
+        terms = merged;
+        icons.Clear();
+        foreach (var icon in catalog.Icons) icons.Add(icon.Key, icon.Value);
+        Revision = catalog.Revision;
+    }
+
+    // 仅接受四张实际装备定义表的名称来源；SW.Item 还包含任务占位、披风、食物和 TNT，不能直接当作装备。
+    // 目录只负责搜索和展示，不声称每件装备都可刷新；没有来源的旧包需更新资源后再参与搜索。
+    static bool SearchableEquipment(string tag)
+    {
+        if (!tag.StartsWith("SW.Item.", StringComparison.Ordinal)) return false;
+        var row = (Dictionary<string, object>)items[tag];
+        object source;
+        if (!row.TryGetValue("namespace", out source)) return false;
+        switch (source as string)
+        {
+            case "Text/Release/DT_ItemDefinitionMelee.csv":
+            case "Text/Release/DT_ItemDefinitionRanged.csv":
+            case "Text/Release/DT_ItemDefinitionArmor.csv":
+            case "Text/Release/DT_ItemDefinitionArtifact.csv": return true;
+            default: return false;
+        }
+    }
+
+    // 用六语言游戏名称或精确标签搜索真实装备来源；宠物、护符、附魔书等也不混入铁匠装备目录。
+    internal static string[] SearchItems(string query)
+    {
+        query = (query ?? "").Trim();
+        return items.Keys.Where(tag => SearchableEquipment(tag) &&
+            (query.Length == 0 || tag.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+             ((object[])((Dictionary<string, object>)items[tag])["names"]).Cast<string>().Any(name => name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)))
+            .OrderBy(tag => Name(tag, L10n.Language)).Take(100).ToArray();
+    }
+
+    // 这里只提供原始效果名称供保存目标，不声称该名称在当前装备候选池内。
+    internal static string[] EffectNames()
+    {
+        return items.Keys.Where(tag => tag.StartsWith("SW.Effect.", StringComparison.Ordinal) &&
+            ((Dictionary<string, object>)items[tag]).ContainsKey("namespace") &&
+            (string)((Dictionary<string, object>)items[tag])["namespace"] == "Text/Release/DT_EffectDefinition.csv" &&
+            HasGameName(tag, L10n.Language))
+            .OrderBy(tag => Name(tag, L10n.Language)).ToArray();
+    }
+
+    // 图标类型标签可以是装备或效果；多图标层级仍保持原有不猜测约束。
+    internal static Bitmap Icon(string tag) { return Icon(new EquipmentItem { Type = tag }); }
+
+    // 只读已校验的图标数据；不存在时用边框颜色回退，不能伪造已下载纹理。
+    internal static Bitmap Texture(string key)
+    {
+        string name;
+        byte[] bytes;
+        if (!uiTextures.TryGetValue(key, out name) || !icons.TryGetValue(name, out bytes)) return null;
+        Bitmap texture;
+        if (textures.TryGetValue(key, out texture)) return texture;
+        using (var stream = new MemoryStream(bytes, false))
+        using (var image = Image.FromStream(stream)) texture = new Bitmap(image);
+        textures[key] = texture;
+        return texture;
     }
 
     // 优先读取可选内嵌展示包，否则仅从 EXE 同目录读取本地图标包。
@@ -103,6 +143,10 @@ static class EquipmentGamePresentation
     {
         return new Dictionary<string, object>
         {
+            // 原始 OnboardingLabels 的 namespace/key/sourceHash 在资源目录记录；离线首启仍可显示游戏原译名。
+            { "Currency_Emerald", new object[] { "绿宝石", "Emeralds", "エメラルド", "에메랄드", "綠寶石", "綠寶石" } },
+            { "Currency_SpringStone", new object[] { "回响碎片", "Echo Shards", "残響のかけら", "에코 조각", "回聲碎片", "回聲碎片" } },
+            { "Currency_EnchantmentPoint", new object[] { "附魔点数", "Enchantment points", "エンチャントポイント", "마법 부여 포인트", "附魔點數", "附魔點數" } },
             {
                 "Equipment_Melee",
                 new object[]
@@ -284,12 +328,16 @@ static class EquipmentGamePresentation
         return rarity >= EquipmentRarity.Common && rarity <= EquipmentRarity.Unique ? Term("SW_Rarity_" + rarity) : L10n.T("关闭");
     }
 
-    // 读取本地目录名称，缺失时由已核实类型标签生成名称，未知类型保留原标识。
     public static string Name(string tag, int language)
     {
         object value;
         if (tag != null && items.TryGetValue(tag, out value))
-            return Localized(((Dictionary<string, object>)value)["names"], language);
+        {
+            var row = (Dictionary<string, object>)value;
+            string name = Localized(row["names"], language).Trim();
+            if (!DisplayName(row, name)) return tag;
+            return name;
+        }
         if (tag != null && NearbyLootCatalog.Contains(tag))
         {
             string name = tag.Substring(tag.LastIndexOf('.') + 1);
@@ -299,13 +347,32 @@ static class EquipmentGamePresentation
         return tag ?? "?";
     }
 
-    // 读取本地目录名称，缺失时由已核实类型标签生成名称，未知类型保留原标识。
+    // 过滤语言表中的 DropChance_TalismanEffect 等占位名。
+    // 它与本地化 key 不同，不能只用“等于 key”识别；原始资源保持原样，本体拒绝将其当正式译名。
+    static bool DisplayName(Dictionary<string, object> row, string name)
+    {
+        object key;
+        return !String.IsNullOrWhiteSpace(name) &&
+            !(row.TryGetValue("key", out key) && key is string &&
+                (name == (string)key || name.EndsWith("," + (string)key, StringComparison.Ordinal))) &&
+            !Regex.IsMatch(name, @"^(?:SW[._]|DT_|Text/Release/|LOCTABLE\s*\()") &&
+            !(name.Contains("_") && Regex.IsMatch(name, @"^[A-Za-z][A-Za-z0-9_]*$"));
+    }
+
+    // 默认效果名称列表只列当前语言可用的原始译名；未知效果仍可按保存/实际读取的精确身份保留。
+    internal static bool HasGameName(string tag, int language)
+    {
+        object value;
+        if (tag == null || !items.TryGetValue(tag, out value)) return false;
+        var row = (Dictionary<string, object>)value;
+        return DisplayName(row, Localized(row["names"], language).Trim());
+    }
+
     public static string Name(EquipmentItem item)
     {
         return Name(item.Type, L10n.Language);
     }
 
-    // 返回本地包已有图标；公开构建无图标时返回空值供 UI 回退。
     public static Bitmap Icon(EquipmentItem item)
     {
         object value;

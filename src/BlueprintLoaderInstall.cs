@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-// 加载器 ZIP 从作者 Nexus 页面取得，不随工具重新分发。
 static class BlueprintLoaderInstaller
 {
     internal const string Source = "https://www.nexusmods.com/minecraftdungeons2/mods/2?tab=files";
@@ -26,7 +25,6 @@ static class BlueprintLoaderInstaller
         "BlueprintLoader_P.ucas"
     };
     const int MaxArchive = 16 * 1024 * 1024, MaxPayload = 32 * 1024 * 1024;
-    // 加载器完整下载包的本地缓存位置，不随仓库上传。
     static string Cache
     {
         get
@@ -35,7 +33,6 @@ static class BlueprintLoaderInstaller
         }
     }
 
-    // 计算文件 SHA256，供安装校验及备份归属检查。
     static string Hash(byte[] data)
     {
         using (var sha = SHA256.Create())
@@ -95,7 +92,6 @@ static class BlueprintLoaderInstaller
         }
     }
 
-    // 检查下载包包含完整加载器三件套与预期二进制头。
     internal static void ValidatePayload(Dictionary<string, byte[]> data)
     {
         if (data.Count != 3 || Files.Any(f => !data.ContainsKey(f) || data[f].Length == 0) || data.Values.Sum(v => (long)v.Length) > MaxPayload)
@@ -165,7 +161,6 @@ static class BlueprintLoaderInstaller
         return data;
     }
 
-    // 检查游戏目录已有加载器是否完整且有效。
     internal static bool IsInstalled(string paks)
     {
         foreach (string folder in LoaderFolders(paks))
@@ -254,6 +249,7 @@ static class BlueprintLoaderInstaller
             throw new IOException(L10n.T("请完全退出游戏和 Minecraft Launcher，再安装蓝图加载器"));
     }
 
+    // 先检查归属并备份旧文件，再安装已验证下载内容。
     internal static string InstallPayload(string paks, Dictionary<string, byte[]> data, string backups, Func<bool> blocked)
     {
         RequireStopped(blocked);
@@ -523,7 +519,6 @@ sealed class BlueprintLoaderDownloadForm : Form
         };
     }
 
-    // 打开作者官方下载页面，网页登录与下载确认由用户完成。
     void OpenSource()
     {
         try

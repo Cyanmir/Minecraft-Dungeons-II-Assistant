@@ -29,7 +29,6 @@ static class NearbyLootCatalog
         }
     }
 
-    // 检查类型标签是否位于已核实物品目录。
     public static bool Contains(string tag)
     {
         return tag != null && tags.Contains(tag);
@@ -66,7 +65,6 @@ static class NearbyLootCatalog
     }
 }
 
-// LootIndicatorLayout 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 static class LootIndicatorLayout
 {
     public const string ComponentPattern = "48 8B 81 ?? ?? ?? ?? 49 89 00 C3";
@@ -93,7 +91,6 @@ sealed class NearbyLootTarget
     public string[] Tags;
 }
 
-// NearbyLootState 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class NearbyLootState
 {
     public bool Known;
@@ -155,7 +152,6 @@ sealed class NearbyLootTiming
         return now - lastAny >= Minimum && now - (kind == "food" ? lastFood : lastOther) >= (kind == "food" ? Clamp(foodInterval) : Clamp(interval));
     }
 
-    // 记录一次尝试的目标或时间；真正成功仍由回执判断。
     public void Attempt(string kind, long now)
     {
         lastAny = now;
@@ -205,7 +201,6 @@ sealed class NearbyLootRule
         return (target.Kind == "item" || target.Kind == "book") && !String.IsNullOrEmpty(target.ItemId) ? "item:" + target.ItemId : target.Id;
     }
 
-    // 记录一次尝试的目标或时间；真正成功仍由回执判断。
     public void Attempt(NearbyLootTarget target)
     {
         attempted.Add(Key(target));
@@ -217,7 +212,6 @@ sealed class NearbyLootRule
         deferred[Key(target)] = now + Math.Max(100, milliseconds);
     }
 
-    // 检查目标是否仍在推迟期限内。
     bool Deferred(NearbyLootTarget target, long now)
     {
         long until;
@@ -285,7 +279,6 @@ sealed class NearbyLootRule
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     // 读取玩家原生投掷物数量，供 TNT 拾取结果比较。
@@ -317,7 +310,6 @@ sealed partial class HealthReader
         return result;
     }
 
-    // 读取真实目标完整名称，供游戏端身份核对。
     string LootObjectName(Identity actor)
     {
         return Name(actor.Name) + (actor.Number > 0 ? "_" + (actor.Number - 1) : "");
@@ -410,6 +402,7 @@ sealed partial class HealthReader
     readonly Dictionary<string, Identity> lootFunctions = new Dictionary<string, Identity>();
     bool lootGetterTried, lootGetterKnown;
     string lootGetterReason;
+    // 记录已验证目标 UObject 身份，避免对象地址复用。
     void TrackNearbyLoot(long address, long cl)
     {
         if (ClassName(cl) == "Function")
@@ -986,7 +979,6 @@ sealed partial class HealthReader
         return state;
     }
 
-    // 导出单个目标的类型、身份和范围诊断信息。
     object NearbyActorDiagnostic(CombatState state)
     {
         var rows = new List<object>();
@@ -1011,7 +1003,6 @@ sealed partial class HealthReader
         return rows;
     }
 
-    // 导出目标与提示控件的只读关联。
     object NearbyPromptDiagnostic()
     {
         var rows = new List<object>();
@@ -1076,7 +1067,6 @@ sealed partial class HealthReader
         return rows;
     }
 
-    // 生成附近目标只读报告，不执行收集。
     public void AuditNearbyLoot(string path)
     {
         var state = ReadNearbyLoot();

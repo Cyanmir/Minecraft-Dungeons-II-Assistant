@@ -11,8 +11,11 @@ sealed class OreNumber : Control
 {
     bool hover;
     decimal min, max = 1000, value;
+    // 编辑缓冲在 Enter 或失焦时提交；Esc 丢弃，避免未完成数字直接进入配置。
     string editing;
     public string Suffix = "";
+    // 默认保持既有六位输入；大范围页面可显式放宽，不截掉百万次数或十位费用预算。
+    public int MaximumInputDigits = 6;
     public event EventHandler ValueChanged;
     // 数字控件允许的最小值；与配置解析和滑块边界同步维护。
     public decimal Minimum
@@ -95,7 +98,6 @@ sealed class OreNumber : Control
         Cursor = Cursors.Hand;
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         int px = OreMetrics.Pixel(this, 2, OreMetrics.ControlHeight), side = Math.Max(24, Height * 3 / 4);
@@ -109,7 +111,6 @@ sealed class OreNumber : Control
         PixelText.DrawCjkOrBody(e.Graphics, (editing ?? Value.ToString("0")) + Suffix, new Rectangle(side + px * 2, 0, Width - side * 2 - px * 4, Height), color, scale, true);
     }
 
-    // 处理按下位置并更新控件交互状态，不发送游戏输入。
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
@@ -126,7 +127,6 @@ sealed class OreNumber : Control
         return keyData == Keys.Left || keyData == Keys.Right || keyData == Keys.Up || keyData == Keys.Down || base.IsInputKey(keyData);
     }
 
-    // 处理控件的方向键、提交或取消操作。
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Right)
@@ -160,7 +160,7 @@ sealed class OreNumber : Control
         if (char.IsDigit(e.KeyChar))
         {
             editing = (editing ?? "") + e.KeyChar;
-            if (editing.Length > 6)
+            if (editing.Length > Math.Max(1, MaximumInputDigits))
                 editing = editing.Substring(1);
             e.Handled = true;
             Invalidate();
@@ -253,7 +253,6 @@ sealed class OreSlider : Control
         Cursor = Cursors.Hand;
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         float scale = OreMetrics.Scale(this);
@@ -293,7 +292,6 @@ sealed class OreSlider : Control
         Value = Minimum + (int)Math.Round(Math.Max(0, Math.Min(1, (x - thumb / 2) / (float)Math.Max(1, Width - thumb))) * (Maximum - Minimum));
     }
 
-    // 处理按下位置并更新控件交互状态，不发送游戏输入。
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
@@ -305,7 +303,6 @@ sealed class OreSlider : Control
         base.OnMouseDown(e);
     }
 
-    // 根据当前拖动状态更新控件值或悬停位置。
     protected override void OnMouseMove(MouseEventArgs e)
     {
         if (dragging)
@@ -339,7 +336,6 @@ sealed class OreSlider : Control
         return keyData == Keys.Left || keyData == Keys.Right || keyData == Keys.Home || keyData == Keys.End || base.IsInputKey(keyData);
     }
 
-    // 处理控件的方向键、提交或取消操作。
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Left)
@@ -373,6 +369,9 @@ sealed class OreSlider : Control
 sealed class OreSelect : Control
 {
     bool hover;
+    Form openPopup;
+    // 可选逐项图标只影响绘制，索引与原有事件/配置映射完全不变；缓存图像由调用者管理。
+    public Func<int, Image> ItemIcon;
     public bool FixedTypography;
     // 项目顺序对应现有配置枚举；翻译只改显示文字，不能重新排序。
     public List<object> Items = new List<object>();
@@ -427,7 +426,6 @@ sealed class OreSelect : Control
         Cursor = Cursors.Hand;
     }
 
-    // 根据控件当前状态绘制外观；不要在绘制阶段修改游戏或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         int px = OreMetrics.Pixel(this, 2, OreMetrics.ControlHeight);
@@ -438,6 +436,17 @@ sealed class OreSelect : Control
             OreRenderer.Focus(e.Graphics, ClientRectangle, px);
         var bounds = new Rectangle(px * 8, 0, Width - px * 23, Height - px * 2);
         string text = index >= 0 && index < Items.Count ? Items[index].ToString() : L10n.T("选择槽位");
+        var image = ItemIcon == null || index < 0 || index >= Items.Count ? null : ItemIcon(index);
+        if (image != null)
+        {
+            int size = Math.Max(1, Math.Min(Height - px * 6, px * 14));
+            var state = e.Graphics.Save();
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+            e.Graphics.DrawImage(image, new Rectangle(bounds.Left, (Height - size) / 2 - px, size, size));
+            e.Graphics.Restore(state);
+            bounds.X += size + px * 3; bounds.Width -= size + px * 3;
+        }
         if (FixedTypography)
             PixelText.DrawMenu(e.Graphics, text, bounds);
         else
@@ -454,7 +463,6 @@ sealed class OreSelect : Control
         Open();
     }
 
-    // 处理控件的方向键、提交或取消操作。
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter)
@@ -476,11 +484,11 @@ sealed class OreSelect : Control
         base.OnKeyDown(e);
     }
 
-    // 打开下拉选项界面，选择结果通过统一索引更新。
     void Open()
     {
         if (!Enabled || Items.Count == 0)
             return;
+        ClosePopup();
         int rowHeight = Math.Max(24, (int)Math.Round(36 * OreMetrics.Scale(this))), edge = OreMetrics.Pixel(this, 2, 44);
         var popup = new Form
         {
@@ -499,6 +507,7 @@ sealed class OreSelect : Control
             BarWidth = Math.Max(12, (int)(16 * OreMetrics.Scale(this)))
         };
         popup.Controls.Add(list);
+        openPopup = popup;
         Point p = PointToScreen(new Point(0, Height));
         Rectangle screen = Screen.FromControl(this).WorkingArea;
         if (p.Y + popup.Height > screen.Bottom)
@@ -512,6 +521,7 @@ sealed class OreSelect : Control
             var b = new OreNavItem
             {
                 Text = Items[i].ToString() + (i == index ? " ✓" : ""),
+                ContentIcon = ItemIcon == null ? null : ItemIcon(i),
                 Navigation = true,
                 FixedTypography = FixedTypography,
                 Selected = i == index,
@@ -521,8 +531,8 @@ sealed class OreSelect : Control
             };
             b.Click += delegate
             {
-                SelectedIndex = n;
                 popup.Close();
+                SelectedIndex = n;
             };
             list.Controls.Add(b);
         }
@@ -535,8 +545,21 @@ sealed class OreSelect : Control
         };
         popup.FormClosed += delegate
         {
+            if (openPopup == popup) openPopup = null;
             popup.Dispose();
         };
         popup.Show(FindForm());
+    }
+    // 切换装备/语言/资源前关闭旧菜单，避免旧索引选中另一效果或绘制已释放的缓存图像。
+    internal void ClosePopup()
+    {
+        var popup = openPopup;
+        openPopup = null;
+        if (popup != null && !popup.IsDisposed) popup.Close();
+    }
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) ClosePopup();
+        base.Dispose(disposing);
     }
 }

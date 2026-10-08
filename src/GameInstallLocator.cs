@@ -11,7 +11,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-// GameInstallResult 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class GameInstallResult
 {
     public string Root, Source;
@@ -37,7 +36,6 @@ static class GameInstallLocator
         return Regex.Replace(value, @"\\([\\" + "\"" + @"])", m => m.Groups[1].Value);
     }
 
-    // 读取 VDF 的键值对，保留原始路径文本。
     static IEnumerable<KeyValuePair<string, string>> Pairs(string text)
     {
         foreach (Match m in pairs.Matches(text ?? ""))
@@ -121,6 +119,7 @@ static class GameInstallLocator
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
+    // 按运行进程、已验证缓存、注册安装顺序选择候选，多候选交给用户选择。
     internal static GameInstallResult Resolve(IEnumerable<string> running, string cached, IEnumerable<string> registered, Func<string, bool> directoryExists, Func<string, bool> fileExists)
     {
         string[] roots = Valid(running, directoryExists, fileExists);
@@ -202,7 +201,6 @@ static class GameInstallLocator
     }
 
     // 两款游戏都使用 Dungeons-Win64-Shipping 名称；需要拒绝已识别的原作 Steam 安装。
-    // 检查已核实 Steam 清单信息。
     static bool KnownSteamOriginal(string root)
     {
         if (String.IsNullOrWhiteSpace(root))

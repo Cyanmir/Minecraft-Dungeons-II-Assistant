@@ -115,7 +115,6 @@ static partial class ToolboxInput
     // Windows 鼠标定位入口，仅属于旧输入路径；原生交互不能调用。
     [DllImport("user32.dll")]
     static extern bool SetCursorPos(int x, int y);
-    // 读取游戏窗口客户区并验证显示区域。
     public static bool ClientArea(IntPtr window, int pid, out Rectangle area)
     {
         area = Rectangle.Empty;
@@ -165,7 +164,6 @@ static partial class ToolboxInput
             throw new Exception("Combat mouse input rejected");
     }
 
-    // 计算旧鼠标输入结构的原生字节尺寸，供 ABI 自检。
     public static int MouseInputSize()
     {
         return Marshal.SizeOf(typeof(MOUSEPACKET));
@@ -239,7 +237,6 @@ sealed partial class ToolboxForm
         settings.CombatRange = (int)combatRange.Value;
     }
 
-    // 释放当前战斗按键租约和输入状态。
     void ReleaseCombat()
     {
         var lease = combatLease;
@@ -255,7 +252,6 @@ sealed partial class ToolboxForm
             }
     }
 
-    // 检测旧输入路径的人工操作与稳定状态。
     bool CombatUserIdle(long now)
     {
         if (!GameForeground())
@@ -283,7 +279,6 @@ sealed partial class ToolboxForm
         return now - cursorMovedAt >= 300 && !held;
     }
 
-    // 检查攻击/技能键与工具触发键是否冲突。
     bool CombatBindingConflict(int root)
     {
         return root == 0 || root == settings.ComboTrigger && settings.ComboEnabled || root == settings.JumpTrigger && settings.JumpEnabled;
@@ -403,7 +398,6 @@ sealed partial class ToolboxForm
         await Task.Delay(60, cancel);
     }
 
-    // 根据勾选槽位、冷却和灵魂预算准备法器请求。
     bool PrepareCombatArtifacts(InputRequest request)
     {
         CombatState current;

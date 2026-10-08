@@ -1,0 +1,11 @@
+<Project Sdk="NeoRune.Sdk/0.3.1">
+  <PropertyGroup>
+    <NeoRuneInstall>false</NeoRuneInstall>
+    <NeoRuneModName>MCD2RerollBridge</NeoRuneModName>
+    <Nullable>annotations</Nullable>
+    <Version>1.1.2</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../bindings/reroll/reroll-bindings.csproj" />
+  </ItemGroup>
+</Project>

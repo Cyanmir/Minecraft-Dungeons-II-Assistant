@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir (https://github.com/Cyanmir/Minecraft-Dungeons-II-Assistant)
-// 读取现场蒙太奇与反射动画状态，补充 CombatTelemetry 的运行证据。
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
-    // ReflectedMotion 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     sealed class ReflectedMotion
     {
         public CombatMotion Motion;
@@ -22,7 +19,6 @@ sealed partial class HealthReader
         return !Double.IsNaN(value) && !Double.IsInfinity(value);
     }
 
-    // 读取真实运行蒙太奇与播放信息，保留未知状态。
     CombatMotion ReadLiveMotion(Identity asset, long now)
     {
         string key = asset.Index + ":" + asset.Serial;

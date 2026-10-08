@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 sealed class NearbyObservationLane
 {
     CancellationTokenSource current;
+    // 当前观察任务尚未完成清理；取消不等于立即释放通道。
     public bool Busy
     {
         get
@@ -47,7 +48,6 @@ sealed class NearbyObservationLane
 
 static class CombatScheduling
 {
-    // 检查人工攻击/技能等按键；可选允许玩家移动，不要求鼠标静止等待。
     public static bool NativeInputReady(CombatState state, ToolboxSettings settings, Func<int, bool> held, bool allowMovement = false)
     {
         if (state == null || settings == null || held == null)
@@ -92,6 +92,5 @@ sealed partial class ToolboxForm
             if (!closing)
                 Arm(false);
         }
-    // 此清理不释放战斗通道的按键，也不改变其按下/抑制状态。
     }
 }

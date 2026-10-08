@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// 更新页的六语言文案。
 static partial class L10n
 {
     // 在主翻译字典完成后注册；新增格式参数时六列必须保持相同占位符。

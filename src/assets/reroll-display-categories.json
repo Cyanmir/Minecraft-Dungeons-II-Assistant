@@ -1,0 +1,242 @@
+{
+  "format": 1,
+  "gameBuild": "1.1.1.0",
+  "source": "DT_EffectTemplateDefinition.json",
+  "sourceSha256": "044f45b4ee765001868c0e6d41484e200ca96ba4564ad1c322c614c592fcecdf",
+  "scope": "Effect template traits grouped for display",
+  "categories": {
+    "SW.Effect.AmmoCapacity": [
+      4
+    ],
+    "SW.Effect.AnimaConduit": [
+      3
+    ],
+    "SW.Effect.ArrowBurst": [
+      3
+    ],
+    "SW.Effect.ArtifactHealing": [
+      5
+    ],
+    "SW.Effect.BeastBoss": [
+      1,
+      2
+    ],
+    "SW.Effect.Chains": [
+      1,
+      2
+    ],
+    "SW.Effect.Committed": [
+      1,
+      2
+    ],
+    "SW.Effect.Constitution": [
+      3
+    ],
+    "SW.Effect.Cooldown": [
+      4
+    ],
+    "SW.Effect.CriticalEdge": [
+      1,
+      2
+    ],
+    "SW.Effect.CriticalHit": [
+      1,
+      2
+    ],
+    "SW.Effect.Deflect": [
+      3
+    ],
+    "SW.Effect.Desperation": [
+      1,
+      2
+    ],
+    "SW.Effect.Duelist": [
+      1
+    ],
+    "SW.Effect.EagleEye": [
+      2
+    ],
+    "SW.Effect.ElementalHit": [
+      5
+    ],
+    "SW.Effect.ElementalProtection": [
+      3
+    ],
+    "SW.Effect.EmeraldsIncrease": [
+      3
+    ],
+    "SW.Effect.Expand": [
+      4
+    ],
+    "SW.Effect.ExperienceIncrease": [
+      5
+    ],
+    "SW.Effect.ExplosiveStrike": [
+      5
+    ],
+    "SW.Effect.Finesse": [
+      1
+    ],
+    "SW.Effect.FireFocus": [
+      4
+    ],
+    "SW.Effect.FriendsForever": [
+      4
+    ],
+    "SW.Effect.Friendship": [
+      4
+    ],
+    "SW.Effect.FrostFocus": [
+      4
+    ],
+    "SW.Effect.Gambler": [
+      3
+    ],
+    "SW.Effect.Hairtrigger": [
+      2
+    ],
+    "SW.Effect.HealingFocus": [
+      4
+    ],
+    "SW.Effect.HealthBoost": [
+      5
+    ],
+    "SW.Effect.Jumpshot": [
+      5
+    ],
+    "SW.Effect.Knockback": [
+      1,
+      2
+    ],
+    "SW.Effect.LightningFocus": [
+      4
+    ],
+    "SW.Effect.Looting": [
+      1,
+      2
+    ],
+    "SW.Effect.Lucky": [
+      3
+    ],
+    "SW.Effect.MasterMarksman": [
+      2
+    ],
+    "SW.Effect.MasterStrike": [
+      1
+    ],
+    "SW.Effect.MultiShot": [
+      2
+    ],
+    "SW.Effect.Opportunist": [
+      1,
+      2
+    ],
+    "SW.Effect.Opulence": [
+      1,
+      2
+    ],
+    "SW.Effect.Plummeting": [
+      5
+    ],
+    "SW.Effect.PointBlank": [
+      2
+    ],
+    "SW.Effect.PoisonFocus": [
+      4
+    ],
+    "SW.Effect.PotionCooldown": [
+      3
+    ],
+    "SW.Effect.Power": [
+      2,
+      4
+    ],
+    "SW.Effect.Precision": [
+      1
+    ],
+    "SW.Effect.ProjectileProtection": [
+      3
+    ],
+    "SW.Effect.Protection": [
+      3
+    ],
+    "SW.Effect.RapidStrike": [
+      3
+    ],
+    "SW.Effect.Reconstruction": [
+      3
+    ],
+    "SW.Effect.Reeling": [
+      1,
+      2
+    ],
+    "SW.Effect.Regeneration": [
+      3
+    ],
+    "SW.Effect.Resilience": [
+      3
+    ],
+    "SW.Effect.RollCooldown": [
+      3
+    ],
+    "SW.Effect.Saboteur": [
+      3
+    ],
+    "SW.Effect.ShadowWalk": [
+      3
+    ],
+    "SW.Effect.Sharpness": [
+      1
+    ],
+    "SW.Effect.Sidestep": [
+      3
+    ],
+    "SW.Effect.Sniper": [
+      2
+    ],
+    "SW.Effect.SoulCurse": [
+      5
+    ],
+    "SW.Effect.SoulFocus": [
+      4
+    ],
+    "SW.Effect.SoulGatherMultiply": [
+      1,
+      2
+    ],
+    "SW.Effect.SoulMax": [
+      4
+    ],
+    "SW.Effect.SpeedBoost": [
+      3
+    ],
+    "SW.Effect.StatusBuff": [
+      5
+    ],
+    "SW.Effect.StatusOnHit.Strength": [
+      5
+    ],
+    "SW.Effect.Supercharge": [
+      2
+    ],
+    "SW.Effect.SweepingEdge": [
+      1
+    ],
+    "SW.Effect.SwiftSneak": [
+      3
+    ],
+    "SW.Effect.Thorns": [
+      3
+    ],
+    "SW.Effect.Vanguard": [
+      1,
+      2
+    ],
+    "SW.Effect.Vestige": [
+      4
+    ],
+    "SW.Effect.Vivify": [
+      4
+    ]
+  }
+}

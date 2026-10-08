@@ -9,7 +9,6 @@ using System.IO;
 using System.Text;
 using System.Web.Script.Serialization;
 
-// MontageCodeLayout 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class MontageCodeLayout
 {
     public int Array, Weight, Position, Rate, Playing;
@@ -76,7 +75,6 @@ sealed class CombatClock
     long last = -1;
     double? confirmedRate;
     // 以连续读值估算真实速度，包含世界/角色时间缩放；需要三个稳定样本，暂停、跳变、切段或变速都会重置。
-    // 读取并规范化一帧动画位置/速率，校验时间连续性。
     public double? Sample(long now, double position, double reported, double sectionEnd, bool playing)
     {
         double? result = null;
@@ -102,12 +100,10 @@ sealed class CombatClock
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     readonly Dictionary<string, Identity> combatFunctions = new Dictionary<string, Identity>();
     readonly Dictionary<string, CombatClock> combatClocks = new Dictionary<string, CombatClock>();
-    // CheckedMotion 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     sealed class CheckedMotion
     {
         public long Checked;
@@ -157,6 +153,7 @@ sealed partial class HealthReader
         return result;
     }
 
+    // 记录已验证函数来源及相对地址，供本地兼容性诊断。
     void RecordAnimationCode(string name, NamedCode code)
     {
         AdaptationRecord.Set("function.AnimInstance." + name, code.Source + "; RVA=0x" + (code.Address - process.MainModule.BaseAddress.ToInt64()).ToString("X") + "; bytes=" + BitConverter.ToString(code.Bytes).Replace('-', ' '));

@@ -18,7 +18,6 @@ struct ThreatVector
         Z = z;
     }
 
-    // Valid 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     public bool Valid
     {
         get
@@ -33,7 +32,6 @@ struct ThreatVector
         return !Double.IsNaN(x) && !Double.IsInfinity(x);
     }
 
-    // Length 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     public double Length
     {
         get
@@ -76,7 +74,6 @@ sealed class CombatExclusion
     public bool? AvatarMatches;
 }
 
-// ThreatFrame 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class ThreatFrame
 {
     public bool Known;
@@ -91,8 +88,6 @@ sealed class ThreatFrame
 
 static class ThreatRule
 {
-    // 计算相对线性运动与膨胀角色胶囊的交点，包含高度约束。
-    // 根据弹道/双方空间状态估算接触时间，未知几何不产生有效预测。
     public static double Impact(ThreatVector offset, ThreatVector relativeVelocity, double radius, double halfHeight, double horizon)
     {
         if (!offset.Valid || !relativeVelocity.Valid || relativeVelocity.Length < 1 || radius <= 0 || halfHeight < radius || horizon <= 0 || horizon > 2)
@@ -178,7 +173,6 @@ static class ThreatRule
 
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     sealed class ThreatSlot
@@ -268,7 +262,6 @@ sealed partial class HealthReader
         }
     }
 
-    // 更新候选列表并移除已失效或换身份的 Actor。
     void RefreshThreatActors(long now)
     {
         // 所有调用使用同一单调时钟，包含威胁观察以外的冷却读取。
@@ -335,7 +328,6 @@ sealed partial class HealthReader
         return v;
     }
 
-    // 读取 Actor 的有效世界位置。
     ThreatVector Position(Identity actor)
     {
         Identity root = Token(M.Q(actor.Address + Offset(actor, "RootComponent", 8)));
@@ -453,7 +445,6 @@ sealed partial class HealthReader
         return candidates[0];
     }
 
-    // 生成当前敌人、弹道、排除原因与攻击证据帧。
     public ThreatFrame Threats(long now)
     {
         var frame = new ThreatFrame();

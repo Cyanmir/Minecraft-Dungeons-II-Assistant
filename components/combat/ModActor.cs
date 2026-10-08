@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// 游戏端原生战斗 Actor：原生近战、法器激活/蓄力/引导和前滚。
+// 游戏端原生战斗 Actor：原生近战、法器激活/蓄力/引导和前滚。协议 5 与独立槽名属于 ABI；只取消本请求所属槽位、装备 UID 和预测键的激活，不能取消玩家手动启动的能力。
 using NeoRune;
 using MCD2CombatNativeBindings;
 using System.Collections.Generic;

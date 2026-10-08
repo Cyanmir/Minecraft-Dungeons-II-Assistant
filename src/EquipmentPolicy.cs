@@ -101,7 +101,6 @@ sealed class EquipmentItem
         return s;
     }
 
-    // 读取 SessionUID、品质、力量、收藏/附魔/来源保护；任何未知结构保持 Known=false。
     public static EquipmentItem Decode(Dictionary<string, object> row)
     {
         var item = new EquipmentItem();
@@ -142,6 +141,7 @@ sealed class EquipmentItem
 
             item.Source = Str(d["DropSource"]);
             item.Quest = Str(d["QuestSource"]);
+            // 只放行已验证敌人掉落来源；未知来源和任务来源继续受保护。
             item.SourceProtected = (item.Source != "None" && !EquipmentDropOrigins.Known(item.Source)) || item.Quest != "None";
             item.OtherProtected |= Arr(row["MetaData"]).Length > 0;
             item.Known = item.Id.Length == 20 && item.Type.StartsWith("SW.Item.") && Convert.ToInt32(row["StackCount"]) == 1;
@@ -155,7 +155,6 @@ sealed class EquipmentItem
     }
 }
 
-// 七类装备的阈值与保护开关；所有执行计划必须经过 Plan，不能直接根据 UI 行出售。
 sealed class EquipmentPolicy
 {
     // 七类普通/风暴装备品质阈值数组；索引与 EquipmentCategory 对应，Off 表示该类不回收。
@@ -263,7 +262,6 @@ sealed class EquipmentPolicy
     }
 }
 
-// EquipmentDecision 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class EquipmentDecision
 {
     public EquipmentItem Item;
@@ -284,7 +282,6 @@ sealed class InventoryBaseline
         }
     }
 
-    // 记录启用时当前关卡/角色与已有 UID 基线。
     public void Capture(string currentSession, IEnumerable<EquipmentItem> items)
     {
         var list = items.Where(i => i.Category != EquipmentCategory.Unsupported).ToList();
@@ -307,4 +304,3 @@ sealed class InventoryBaseline
         ids = null;
     }
 }
-

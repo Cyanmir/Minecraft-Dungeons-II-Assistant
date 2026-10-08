@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Cyanmir
-// 设置页的更新通道、启动检查、自动安装与进度显示。
 using System;
 using System.Drawing;
 using System.Threading;
@@ -23,7 +22,6 @@ sealed partial class ToolboxForm
     // 工具更新放在操作辅助之后；组件安装位于页首，分组间保留 12 个逻辑像素。
     void BuildUpdateSettings()
     {
-        // 更新选项使用普通分组，与页面共用背景，仅保留底部分隔线。
         var card = Card(pages[3], 648, 368);
         LabelAt(card, L10n.T("工具更新"), 20, 16, 704, 30);
         LabelAt(card, L10n.T("启动时检查更新"), 20, 60, 590, 28);
@@ -63,7 +61,6 @@ sealed partial class ToolboxForm
         RefreshUpdateLanguage();
     }
 
-    // 更新设置独立保存，不暂停正在执行的游戏功能。
     void SaveUpdateSettings()
     {
         ReadUpdateSettings();
@@ -91,7 +88,6 @@ sealed partial class ToolboxForm
         if (updateInstall != null)
             updateInstall.Enabled = !updateBusy && updateOffer != null && updateOffer.Different;
     }
-    // 更新通道选项与动态状态同步刷新，保留用户选中项和当前检查结果。
     void RefreshUpdateLanguage()
     {
         if (updateChannel == null)

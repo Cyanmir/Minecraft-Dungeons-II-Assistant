@@ -1182,6 +1182,12 @@ static partial class L10n
         En["敌人状态读取失败，未执行操作"] = "Enemy state capture failed; no action performed";
         En["寻路验证"] = "Navigation";
         En["装备整理"] = "Equipment";
+        // 导航与页面标题明确标注实验功能；日志及原有状态文案仍使用各自规范键。
+        En["装备整理（实验）"] = "Gear (Exp.)";
+        Ja["装备整理（实验）"] = "装備整理（試験）";
+        Ko["装备整理（实验）"] = "장비 정리 (실험)";
+        Hk["装备整理（实验）"] = "裝備整理（實驗）";
+        Tw["装备整理（实验）"] = "裝備整理（實驗）";
         En["寻路验证（本地开发）"] = "Navigation (local development)";
         En["装备整理（仅预览）"] = "Equipment (preview only)";
         En["先验证导航网格与目标；完整自动流程尚未开放"] = "Verify mesh and target first; full automation is not available";
@@ -1262,6 +1268,8 @@ static partial class L10n
         En["请先退出游戏，再安装组件"] = "Exit the game before installing components.";
         CompleteTranslations();
         RegisterOreText();
+        RegisterRerollText();
+        RegisterRerollSimpleText();
         RegisterUpdateText();
     }
 }

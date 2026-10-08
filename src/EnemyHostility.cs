@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     static readonly string[] hostilityPatterns =
@@ -113,7 +112,6 @@ sealed partial class HealthReader
         AdaptationRecord.Set("hostility.lookup", "native symbols unavailable -> reflected function name -> verified instruction patterns");
     }
 
-    // 读取对象拥有的完整标签，用于敌对/生命/可作用性判断。
     List<string> OwnedTags(Identity actor)
     {
         OwnedTagsLayout(actor);

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 static partial class L10n
 {
     public static int Language;
-    // English 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     public static bool English
     {
         get
@@ -22,7 +21,6 @@ static partial class L10n
         }
     }
 
-    // Cjk 的只读/受控访问入口；使用该属性而不绕过访问器中的校验和更新逻辑。
     public static bool Cjk
     {
         get

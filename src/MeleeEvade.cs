@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 // 短期估计来自实际命名骨骼姿态，不由静态动画名/半径触发；伤害和闪避接受条件仍由游戏决定。
-// MeleeTrajectory 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
 sealed class MeleeTrajectory
 {
     public CombatGeometry Geometry;
@@ -21,7 +20,6 @@ sealed class MeleeTrajectory
 
 sealed class MeleeThreatTracker
 {
-    // Sample 的数据/状态结构；字段由本文件解析或计算，下游应保留未知值和身份有效性检查。
     sealed class Sample
     {
         public long Time;
@@ -131,6 +129,7 @@ sealed class MeleeThreatTracker
         return null;
     }
 
+    // 核对候选闪避方向是否避开已验证近战轨迹。
     public static bool EscapeClear(EnemyThreat threat, CombatState state, ThreatVector direction)
     {
         var path = threat.Melee;

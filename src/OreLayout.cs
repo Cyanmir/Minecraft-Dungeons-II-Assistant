@@ -36,7 +36,6 @@ static class OreDpi
         SetProcessDPIAware();
     }
 
-    // 创建前取系统 DPI，创建后取当前显示器 DPI；无新版 API 时使用 GDI 回退。
     public static float Scale(IntPtr window)
     {
         if (window != IntPtr.Zero)
@@ -107,6 +106,7 @@ sealed partial class ToolboxForm
         foreach (var entry in designBounds.OrderBy(x => LayoutDepth(x.Key)))
         {
             Control control = entry.Key, parent = control.Parent;
+            if (control.FindForm() != this) continue;
             var surface = control as OreCard;
             if (surface != null)
                 surface.RenderScale = scale;
@@ -146,18 +146,22 @@ sealed partial class ToolboxForm
 
         foreach (var entry in designTextScale)
         {
+            if (entry.Key.FindForm() != this) continue;
             var label = entry.Key as PixelLabel;
             var button = entry.Key as OreButton;
             if (label != null)
                 label.PixelScale = entry.Value * scale;
             else if (button != null)
-                button.PixelScale = (button.Navigation ? 1.1f : entry.Value) * scale;
+                // 带实验标注的导航稍收紧字号，完整显示括号文字，沿用现有按钮宽度。
+                button.PixelScale = (button.Navigation ? ((button.Tag as string) == "装备整理（实验）" ? 1f : 1.1f) : entry.Value) * scale;
         }
 
         foreach (var page in pages.OfType<OreScrollPanel>())
             page.ContentHeight = Math.Max(page.Height, (int)Math.Round(page.Controls.Cast<Control>().Where(c => !(c is OreScrollBar)).Select(c => designBounds.ContainsKey(c) ? designBounds[c].Bottom + 8 : 0).DefaultIfEmpty(0).Max() * scale));
         foreach (var sidebar in Controls.OfType<OreSidebar>())
-            sidebar.ContentHeight = Math.Max(sidebar.Height, (int)Math.Round(640 * scale));
+            sidebar.ContentHeight = Math.Max(sidebar.Height, (int)Math.Round(692 * scale));
+        // 仅刷词条页覆盖通用纵向布局；其他功能保持原有坐标与滚动方式。
+        LayoutRerollPage(scale);
         maximizeButton.Text = fullScreen || WindowState == FormWindowState.Maximized ? "❐" : "□";
         ResumeLayout();
         Invalidate(true);

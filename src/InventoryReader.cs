@@ -7,7 +7,6 @@ using System.IO;
 using System.Text;
 using System.Web.Script.Serialization;
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     // 按反射字段类型读取单个装备字段，未知字段保留不可读原因。
@@ -111,6 +110,13 @@ sealed partial class HealthReader
             try
             {
                 values[name] = ReadItemField(f, address + M.I(f + 72), depth);
+                // 铁匠使用原生 UID；原整理模块保留原哈希，不改变回收协议。
+                if (name == "SessionUID" && M.I(f + 52) == 8)
+                {
+                    byte[] uid = M.Read(address + M.I(f + 72), 8);
+                    if (!Object.Equals(values[name], InventoryIdentity(uid))) throw new Exception("Inventory UID changed");
+                    values["NativeSessionUID"] = BitConverter.ToInt64(uid, 0).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
             }
             catch (Exception e)
             {

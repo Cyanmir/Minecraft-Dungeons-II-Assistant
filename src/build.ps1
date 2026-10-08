@@ -14,11 +14,11 @@ Push-Location $PSScriptRoot
 try {
     # Framework64 对应 x64 进程读取与输入 ABI，不能随意改为 x86。
     $compiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-    # 显式嵌入三种组件的完整 pak/utoc/ucas、产品字体和许可，不遍历 bin/obj 。
+    # 显式嵌入四种组件的完整 pak/utoc/ucas、产品字体和许可，不遍历 bin/obj 。
     # 出售组件沿用已验证预编译文件，不从历史 stub 重建。
     & $compiler `
         /nologo /target:winexe /platform:x64 /optimize+ `
-        /win32icon:assets/toolbox.ico @taskOptionalResource /resource:assets/combat-catalog.json,combat-catalog.json /resource:assets/loot-catalog.json,loot-catalog.json `
+        /win32icon:assets/toolbox.ico @taskOptionalResource /resource:assets/reroll-display-categories.json,reroll-display-categories.json /resource:assets/reroll-effect-levels.json,reroll-effect-levels.json /resource:assets/combat-catalog.json,combat-catalog.json /resource:assets/loot-catalog.json,loot-catalog.json `
         /resource:assets/nearby-component/MCD2NearbyLootBridge_P.pak,MCD2NearbyLootBridge_P.pak /resource:assets/nearby-component/MCD2NearbyLootBridge_P.utoc,MCD2NearbyLootBridge_P.utoc /resource:assets/nearby-component/MCD2NearbyLootBridge_P.ucas,MCD2NearbyLootBridge_P.ucas /resource:assets/equipment-component/MCD2EquipmentBridge_P.pak,MCD2EquipmentBridge_P.pak `
         /resource:assets/equipment-component/MCD2EquipmentBridge_P.utoc,MCD2EquipmentBridge_P.utoc /resource:assets/equipment-component/MCD2EquipmentBridge_P.ucas,MCD2EquipmentBridge_P.ucas /resource:assets/toolbox.ico,toolbox.ico /resource:assets/toolbox.png,toolbox.png `
         /resource:assets/unifont.hex.gz,unifont.hex.gz /resource:assets/minecraft-ten.ttf,minecraft-ten.ttf /resource:assets/minecraft-body.ttf,minecraft-body.ttf /resource:assets/source-han-jp.otf,source-han-jp.otf `
@@ -27,9 +27,10 @@ try {
         /resource:assets/source-han-tw-heavy.otf,source-han-tw-heavy.otf /resource:../LICENSE,LICENSE /resource:../LICENSE.zh-CN.md,LICENSE.zh-CN.md /resource:../THIRD_PARTY_NOTICES.md,THIRD_PARTY_NOTICES.md `
         /resource:assets/Mojang-fonts-license.txt,Mojang-fonts-license.txt /resource:assets/Mojang-fonts-OFL.txt,Mojang-fonts-OFL.txt /resource:assets/OFL-1.1.txt,OFL-1.1.txt /resource:assets/SourceHanSans-LICENSE.txt,SourceHanSans-LICENSE.txt `
         /resource:assets/combat-component/MCD2CombatBridge_P.pak,MCD2CombatBridge_P.pak /resource:assets/combat-component/MCD2CombatBridge_P.utoc,MCD2CombatBridge_P.utoc /resource:assets/combat-component/MCD2CombatBridge_P.ucas,MCD2CombatBridge_P.ucas /resource:assets/native-combat-artifacts.json,native-combat-artifacts.json `
+        /resource:assets/reroll-component/MCD2RerollBridge_P.pak,MCD2RerollBridge_P.pak /resource:assets/reroll-component/MCD2RerollBridge_P.utoc,MCD2RerollBridge_P.utoc /resource:assets/reroll-component/MCD2RerollBridge_P.ucas,MCD2RerollBridge_P.ucas `
         /out:$Output /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Core.dll `
         /r:System.Web.Extensions.dll /r:System.IO.Compression.dll AutoHeal.cs BackgroundPolicy.cs ComponentBundleInstall.cs BlueprintLoaderInstall.cs `
-        GameLocator.cs GameInstallLocator.cs EnemyThreats.cs `
+        GameLocator.cs GameBuildCompatibility.cs GameInstallLocator.cs EnemyThreats.cs `
         CombatDefinitions.cs CombatTelemetry.cs BoneGeometry.cs LiveCombatMotion.cs `
         CombatEligibility.cs CombatRuntime.cs CombatActions.cs CombatScheduling.cs `
         CombatEvade.cs CombatBridge.cs CombatBridgeInstall.cs MeleeEvade.cs `
@@ -40,7 +41,8 @@ try {
         EquipmentActions.cs EquipmentVisualization.cs EquipmentGamePresentation.cs `
         NavigationMesh.cs QuestDestination.cs AutomationUi.cs AutomationLocalization.cs CompleteLocalization.cs `
         AdaptationRecord.cs ToolboxWindow.cs ToolboxAssembly.cs OreUi.cs OreTheme.cs OreMetrics.cs OreRenderer.cs `
-        OreButtons.cs OreSurfaces.cs OreScrolling.cs OreSelection.cs OreInputs.cs OreDashboard.cs OreLocalization.cs OreLayout.cs `
+        OreButtons.cs OreSurfaces.cs OreScrolling.cs OreTextView.cs OreSelection.cs OreInputs.cs OreDashboard.cs OreLocalization.cs OreLayout.cs `
+        RerollPolicy.cs RerollEffectLevels.cs RerollBridge.cs RerollConfiguration.cs RerollExecution.cs RerollUi.cs RerollTargetsUi.cs RerollGearPlansUi.cs RerollSlidersUi.cs RerollInventoryUi.cs RerollLayoutUi.cs RerollCardPresentation.cs RerollTaskQueueUi.cs RerollDetailsWindow.cs RerollTargetWindowUi.cs RerollBatch.cs RerollFilterUi.cs RerollSimpleLocalization.cs RerollRunUi.cs RerollLocalization.cs RerollExecutionLocalization.cs GameResources.cs GameResourcesUi.cs EquipmentRarityFrame.cs `
         Localization.cs Diagnostics.cs LicenseViewer.cs AppUpdate.cs AppUpdateUi.cs AppUpdateLocalization.cs
     # 编译器失败时不继续打包；构建过程不修改游戏安装文件。
     if($LASTEXITCODE -ne 0){throw '编译失败'}

@@ -17,11 +17,11 @@ sealed class QuestDestination
     public Dictionary<string, object> Behavior;
 }
 
-// 跨文件的只读游戏读取器；各 partial 文件共同持有同一连接/对象身份缓存。
 sealed partial class HealthReader
 {
     const string CopperReplayType = "SW.QuestActor.CA07.BR.QuestGiver";
     int activeBehaviorOffset = -1;
+    // 解析已验证任务行为访问布局。
     int ActiveBehaviorOffset()
     {
         if (activeBehaviorOffset >= 0)
@@ -80,7 +80,6 @@ sealed partial class HealthReader
         return true;
     }
 
-    // 读取已适配任务目标的真实世界位置和会话信息。
     public QuestDestination ReadCopperReplayDestination()
     {
         Identity pawn = Pawn(), playerLevel = Token(M.Q(pawn.Address + 32)), world = Token(M.Q(playerLevel.Address + Offset(playerLevel, "OwningWorld", 8)));

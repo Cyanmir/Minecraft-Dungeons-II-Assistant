@@ -57,7 +57,6 @@ sealed partial class ToolboxForm
             homeComponents[i].PixelScale = .85f;
         }
 
-        // 设置页使用普通分组，提供原有快捷辅助配置入口。
         var shortcuts = Card(pages[3], 524, 112);
         LabelAt(shortcuts, L10n.T("操作辅助"), 20, 16, 690, 28);
         ButtonAt(shortcuts, L10n.T("配置组合、跳劈和右键闪避"), 20, 56, 704).Click += delegate
