@@ -128,6 +128,11 @@ sealed partial class ToolboxForm
 
             Rectangle originalParent;
             float ratio = designBounds.TryGetValue(parent, out originalParent) ? parent.Width / (float)originalParent.Width : scale;
+            // 滚动页里的卡片整体为滚动条让出一次右侧空间；并排卡片按同一比例排布，左右间距与上下间距一致。
+            bool scrolledCard = control is OreCard && parent is OreScrollPanel;
+            int scrollGutter = (int)Math.Round(20 * scale);
+            if (scrolledCard && originalParent.Width > 0)
+                ratio = Math.Max(1, parent.Width - scrollGutter) / (float)originalParent.Width;
             int x = (int)Math.Round(r.X * ratio), width = (int)Math.Round(r.Width * ratio);
             // 固定尺寸的右侧输入控件对齐右边距；左侧标签和滑块使用剩余宽度。
             bool fixedWidth = control is OreNumber || control is OreSelect || control is OreToggle || control is KeyButton;
@@ -139,8 +144,8 @@ sealed partial class ToolboxForm
                 x = parent.Width - (int)Math.Round((originalParent.Width - r.Right) * scale) - width;
             }
 
-            if (control is OreCard && parent is OreScrollPanel)
-                width -= (int)Math.Round(20 * scale);
+            if (scrolledCard && originalParent.Width <= 0)
+                width -= scrollGutter;
             control.Bounds = new Rectangle(x, (int)Math.Round(r.Y * scale), Math.Max(1, width), Math.Max(1, (int)Math.Round(r.Height * scale)));
         }
 

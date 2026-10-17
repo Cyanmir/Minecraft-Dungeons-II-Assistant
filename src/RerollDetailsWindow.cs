@@ -12,8 +12,8 @@ sealed class RerollDetailsWindow : Form
     internal readonly Panel Content = new Panel { Dock = DockStyle.Fill, BackColor = OreTheme.Background };
     readonly Panel header = new Panel { Dock = DockStyle.Top, BackColor = OreTheme.Field };
     readonly PixelLabel title = new PixelLabel { Text = L10n.T("装备详情"), Wrap = false, VerticalCenter = true, EnglishHeading = true };
-    readonly OreButton minimize = new OreButton { Text = "−", AccessibleName = L10n.T("最小化") };
-    readonly OreButton closeTitle = new OreButton { Text = "×", Destructive = true, AccessibleName = L10n.T("关闭") };
+    readonly OreButton minimize = new OreButton { Text = "−", Ghost = true, AccessibleName = L10n.T("最小化") };
+    readonly OreButton closeTitle = new OreButton { Text = "×", Destructive = true, Ghost = true, AccessibleName = L10n.T("关闭") };
     Control gearIcon, gearName, details;
     OreButton queueAction, closeBody;
     float scale;
@@ -100,7 +100,7 @@ sealed class RerollDetailsWindow : Form
     }
     protected override void OnPaint(PaintEventArgs e)
     {
-        base.OnPaint(e); OreTheme.Border(e.Graphics, ClientRectangle, OreTheme.Line, P(2));
+        base.OnPaint(e); OreTheme.Border(e.Graphics, ClientRectangle, OreTheme.Edge, P(1));
     }
     protected override void WndProc(ref Message message)
     {

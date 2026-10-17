@@ -11,13 +11,23 @@ sealed class OreScrollBar : Control
 {
     public int Maximum, PageSize, Value;
     public event Action<int> Changed;
-    bool dragging;
+    bool dragging, hover;
     int dragY, dragValue;
     public OreScrollBar()
     {
         Width = 16;
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
         Cursor = Cursors.Hand;
+        MouseEnter += delegate
+        {
+            hover = true;
+            Invalidate();
+        };
+        MouseLeave += delegate
+        {
+            hover = false;
+            Invalidate();
+        };
     }
 
     int ThumbHeight
@@ -38,12 +48,18 @@ sealed class OreScrollBar : Control
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        int px = Math.Max(1, (int)Math.Round(2 * OreMetrics.Scale(this)));
-        OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Background : Parent.BackColor);
-        OreRenderer.Fill(e.Graphics, new Rectangle((Width - px * 2) / 2, 0, px * 2, Height), OreTheme.Line);
-        var thumb = new Rectangle((Width - px * 5) / 2, ThumbY, px * 5, ThumbHeight);
-        OreRenderer.Fill(e.Graphics, thumb, OreTheme.Line);
-        OreRenderer.Rim(e.Graphics, Rectangle.Inflate(thumb, -px, -px), dragging ? OreTheme.LightHover : OreTheme.Light, OreTheme.LightHover, OreTheme.Muted, px);
+        float scale = OreMetrics.Scale(this);
+        Color back = Parent == null ? OreTheme.Background : Parent.BackColor;
+        OreRenderer.Fill(e.Graphics, ClientRectangle, back);
+        // 细胶囊拇指，无轨道线；悬停或拖动时加宽并提亮，平时不抢内容视线。
+        bool active = hover || dragging;
+        int width = Math.Max(4, Math.Min(Width - 2, (int)Math.Round((active ? 8 : 6) * scale)));
+        int inset = Math.Max(1, (int)Math.Round(2 * scale));
+        if (active)
+            OreRenderer.FillRound(e.Graphics, new Rectangle((Width - width) / 2, 0, width, Height), OreRenderer.Mix(back, OreTheme.Text, 4), width);
+        var thumb = new Rectangle((Width - width) / 2, ThumbY + inset, width, Math.Max(width, ThumbHeight - inset * 2));
+        Color color = dragging ? OreRenderer.Mix(OreTheme.Edge, OreTheme.Text, 45) : hover ? OreRenderer.Mix(OreTheme.Edge, OreTheme.Text, 30) : OreRenderer.Mix(OreTheme.Edge, OreTheme.Text, 14);
+        OreRenderer.FillRound(e.Graphics, thumb, color, width);
     }
 
     protected override void OnMouseDown(MouseEventArgs e)
@@ -72,6 +88,7 @@ sealed class OreScrollBar : Control
     {
         dragging = false;
         Capture = false;
+        Invalidate();
         base.OnMouseUp(e);
     }
 }

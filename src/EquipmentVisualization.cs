@@ -180,7 +180,7 @@ sealed class EquipmentVisualList : Control
             var item = row.Decision.Item;
             int y = HeaderHeight + i * RowHeight;
             Color color = row.Departed ? warning : row.Decision.Sell ? OreTheme.Accent : OreTheme.Muted;
-            OreTheme.Fill(e.Graphics, new Rectangle(0, y, width, RowHeight - 2), i % 2 == 0 ? OreTheme.Card : Color.FromArgb(15, 33, 40));
+            OreTheme.Fill(e.Graphics, new Rectangle(0, y, width, RowHeight - 2), i % 2 == 0 ? OreTheme.Card : OreTheme.CardAlt);
             OreTheme.Fill(e.Graphics, new Rectangle(0, y + 4, 3, RowHeight - 10), color);
             string name = EquipmentGamePresentation.Name(item);
             int iconSize = Math.Max(28, RowHeight - 10);

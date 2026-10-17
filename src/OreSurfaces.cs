@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
-// 状态卡片只负责背景、边框和边缘高光；Section 模式仅绘制分组细线。
+// 卡片只负责圆角背景、细描边和顶部微光；Section 标志保留给布局与旧调用识别分组。
 class OreCard : Panel
 {
     public bool Section;
@@ -21,15 +21,13 @@ class OreCard : Panel
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        int px = Math.Max(1, (int)Math.Round(2 * RenderScale));
-        if (Section)
-        {
-            OreRenderer.Fill(e.Graphics, new Rectangle(px * 8, Height - px, Math.Max(0, Width - px * 16), px), OreTheme.Edge);
-            return;
-        }
-
-        OreRenderer.Border(e.Graphics, ClientRectangle, OreTheme.Line, px);
-        OreRenderer.Rim(e.Graphics, Rectangle.Inflate(ClientRectangle, -px, -px), BackColor, OreRenderer.Highlight(BackColor), OreTheme.Field, px);
+        int line = Math.Max(1, (int)Math.Round(RenderScale)), radius = Math.Max(4, (int)Math.Round(10 * RenderScale));
+        // 先铺父容器底色，圆角外侧与页面融合；分组和状态卡共用同一卡片外观。
+        OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Background : Parent.BackColor);
+        OreRenderer.Plate(e.Graphics, ClientRectangle, BackColor, OreTheme.Outline, radius, line);
+        // 顶部 1px 微光让卡片在深色底上有轻微的抬起感。
+        using (var sheen = new SolidBrush(Color.FromArgb(10, Color.White)))
+            e.Graphics.FillRectangle(sheen, new Rectangle(radius, line, Math.Max(0, Width - radius * 2), line));
     }
 }
 
@@ -59,19 +57,30 @@ sealed class OreHealthBar : Control
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        OreTheme.Fill(e.Graphics, ClientRectangle, OreTheme.Line);
-        OreTheme.Fill(e.Graphics, new Rectangle(2, 2, Width - 4, Height - 4), OreTheme.Field);
-        OreTheme.Fill(e.Graphics, new Rectangle(2, 2, (int)((Width - 4) * Percent / 100), Height - 4), Percent < 40 ? OreTheme.Danger : OreTheme.Green);
+        // 胶囊形进度：深槽 + 渐变填充，低于 40% 转为红色警示。
+        Color back = Parent == null ? OreTheme.Card : Parent.BackColor;
+        OreRenderer.Fill(e.Graphics, ClientRectangle, back);
+        int radius = Height / 2;
+        OreRenderer.Plate(e.Graphics, ClientRectangle, OreTheme.Field, OreTheme.Line, radius, 1);
+        int width = (int)Math.Round((Width - 2) * Percent / 100);
+        if (width <= 0)
+            return;
+        Color fill = Percent < 40 ? OreTheme.Danger : OreTheme.Green;
+        var bar = new Rectangle(1, 1, Math.Max(Height - 2, width), Height - 2);
+        var state = e.Graphics.Save();
+        e.Graphics.SetClip(new Rectangle(1, 1, width, Height - 2));
+        OreRenderer.FillRoundGradient(e.Graphics, bar, OreRenderer.Highlight(fill, 22), fill, radius - 1);
+        e.Graphics.Restore(state);
     }
 }
 
-// 普通设置分组只有底部分隔线；继承容器接口以保持原有布局和事件绑定。
+// 普通设置分组与状态卡同为圆角卡片；继承容器接口以保持原有布局和事件绑定。
 sealed class OreSection : OreCard
 {
     public OreSection()
     {
         Section = true;
-        BackColor = OreTheme.Background;
+        BackColor = OreTheme.Card;
     }
 }
 
@@ -81,15 +90,16 @@ sealed class OreSidebar : OreScrollPanel
     // 侧栏沿用统一滚动容器，矮窗口仍可访问全部快捷操作。
     public OreSidebar()
     {
-        BackColor = OreTheme.Card;
+        BackColor = OreTheme.Field;
         SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
     }
 
-    // 先绘制滚动容器，再补右边界；绘制不改变滚动偏移或业务状态。
+    // 先绘制滚动容器，再补 1px 右边界；绘制不改变滚动偏移或业务状态。
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        OreRenderer.Fill(e.Graphics, new Rectangle(Width - 2, 0, 2, Height), OreTheme.Field);
+        int line = Math.Max(1, (int)Math.Round(OreMetrics.Scale(this)));
+        OreRenderer.Fill(e.Graphics, new Rectangle(Width - line, 0, line, Height), OreTheme.Line);
     }
 }
 
@@ -106,6 +116,7 @@ sealed class OreDivider : Control
     // 只填充细分隔条，不读取配置或游戏状态。
     protected override void OnPaint(PaintEventArgs e)
     {
-        OreRenderer.Fill(e.Graphics, ClientRectangle, OreTheme.Edge);
+        OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Background : Parent.BackColor);
+        OreRenderer.Fill(e.Graphics, new Rectangle(0, (Height - 1) / 2, Width, 1), OreTheme.Line);
     }
 }

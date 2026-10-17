@@ -52,7 +52,7 @@ sealed class OreTextView : Panel
     {
         if (body == null || bar == null) return;
         float scale = OreMetrics.Scale(this);
-        int inset = Math.Max(2, (int)Math.Round(3 * scale)), width = Math.Max(12, (int)Math.Round(16 * scale));
+        int inset = Math.Max(3, (int)Math.Round(5 * scale)), width = Math.Max(12, (int)Math.Round(14 * scale));
         body.Bounds = new Rectangle(inset, inset, Math.Max(1, Width - inset * 2 - width), Math.Max(1, Height - inset * 2));
         bar.Bounds = new Rectangle(Math.Max(inset, Width - inset - width), inset, width, Math.Max(1, Height - inset * 2));
         body.Font = Font; body.BackColor = BackColor; body.ForeColor = ForeColor;
@@ -101,6 +101,10 @@ sealed class OreTextView : Panel
     protected override void OnBackColorChanged(EventArgs e) { base.OnBackColorChanged(e); Arrange(); }
     protected override void OnPaint(PaintEventArgs e)
     {
-        base.OnPaint(e); OreRenderer.Border(e.Graphics, ClientRectangle, OreTheme.Edge, Math.Max(1, (int)Math.Round(OreMetrics.Scale(this))));
+        base.OnPaint(e);
+        // 圆角外侧铺父容器色，内侧保留文本底色，细描边与输入框一致。
+        float scale = OreMetrics.Scale(this);
+        OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Card : Parent.BackColor);
+        OreRenderer.Plate(e.Graphics, ClientRectangle, BackColor, OreTheme.Edge, Math.Max(2, (int)Math.Round(6 * scale)), Math.Max(1, (int)Math.Round(scale)));
     }
 }

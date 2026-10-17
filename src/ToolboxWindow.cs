@@ -1099,7 +1099,7 @@ sealed class KeyButton : OreButton
                 };
                 f.Paint += delegate (object sender, PaintEventArgs e)
                 {
-                    OreTheme.Border(e.Graphics, f.ClientRectangle, OreTheme.Line, 2);
+                    OreTheme.Border(e.Graphics, f.ClientRectangle, OreTheme.Edge, 1);
                 };
                 f.KeyDown += delegate (object sender, KeyEventArgs e)
                 {
@@ -1644,6 +1644,16 @@ sealed partial class ToolboxForm : Form
             BackColor = OreTheme.Field
         };
         Controls.Add(header);
+        // 顶栏底部 1px 分隔线，与侧栏右边线连成一体的窗口框架。
+        header.Paint += delegate (object sender, PaintEventArgs e)
+        {
+            int line = Math.Max(1, (int)Math.Round(UiScale));
+            OreRenderer.Fill(e.Graphics, new Rectangle(0, header.Height - line, header.Width, line), OreTheme.Line);
+        };
+        header.Resize += delegate
+        {
+            header.Invalidate();
+        };
         using (var stream = assembly.GetManifestResourceStream("toolbox.png"))
         {
             if (stream != null)
@@ -1685,6 +1695,7 @@ sealed partial class ToolboxForm : Form
             Text = "−",
             Location = new Point(920, 14),
             Size = new Size(38, 34),
+            Ghost = true,
             PixelScale = 1.3f
         };
         var close = new OreButton
@@ -1693,6 +1704,7 @@ sealed partial class ToolboxForm : Form
             Location = new Point(969, 14),
             Size = new Size(38, 34),
             Destructive = true,
+            Ghost = true,
             PixelScale = 1.3f
         };
         header.Controls.Add(minimize);
@@ -1710,6 +1722,7 @@ sealed partial class ToolboxForm : Form
             Text = "□",
             Location = new Point(871, 14),
             Size = new Size(38, 34),
+            Ghost = true,
             PixelScale = 1.3f
         };
         header.Controls.Add(maximizeButton);

@@ -100,14 +100,20 @@ sealed class OreNumber : Control
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        int px = OreMetrics.Pixel(this, 2, OreMetrics.ControlHeight), side = Math.Max(24, Height * 3 / 4);
+        int px = OreMetrics.Pixel(this, 2, OreMetrics.ControlHeight), side = Math.Max(24, Height * 3 / 4), line = Math.Max(1, px / 2);
+        OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Card : Parent.BackColor);
         OreRenderer.Field(e.Graphics, ClientRectangle, px, hover, Focused, Enabled);
         Color color = Enabled ? OreTheme.Text : OreTheme.DisabledText;
-        OreRenderer.Fill(e.Graphics, new Rectangle(side, px * 2, px, Height - px * 4), OreTheme.Edge);
-        OreRenderer.Fill(e.Graphics, new Rectangle(Width - side - px, px * 2, px, Height - px * 4), OreTheme.Edge);
+        // 两侧步进区与数值区之间用细竖线分隔；加减号用整像素矩形绘制，任何缩放下都清晰。
+        OreRenderer.Fill(e.Graphics, new Rectangle(side, px * 3, line, Math.Max(0, Height - px * 6)), OreTheme.Line);
+        OreRenderer.Fill(e.Graphics, new Rectangle(Width - side - line, px * 3, line, Math.Max(0, Height - px * 6)), OreTheme.Line);
         float scale = OreMetrics.Scale(this);
-        PixelText.DrawCjkOrBody(e.Graphics, "-", new Rectangle(0, 0, side, Height), color, scale, true);
-        PixelText.DrawCjkOrBody(e.Graphics, "+", new Rectangle(Width - side, 0, side, Height), color, scale, true);
+        Color glyph = Enabled ? OreTheme.Soft : OreTheme.DisabledText;
+        int arm = Math.Max(3, (int)Math.Round(5 * scale)), stroke = Math.Max(1, px);
+        int minusX = side / 2, plusX = Width - side / 2, middle = Height / 2;
+        OreRenderer.Fill(e.Graphics, new Rectangle(minusX - arm, middle - stroke / 2, arm * 2, stroke), glyph);
+        OreRenderer.Fill(e.Graphics, new Rectangle(plusX - arm, middle - stroke / 2, arm * 2, stroke), glyph);
+        OreRenderer.Fill(e.Graphics, new Rectangle(plusX - stroke / 2, middle - arm, stroke, arm * 2), glyph);
         PixelText.DrawCjkOrBody(e.Graphics, (editing ?? Value.ToString("0")) + Suffix, new Rectangle(side + px * 2, 0, Width - side * 2 - px * 4, Height), color, scale, true);
     }
 
@@ -258,23 +264,21 @@ sealed class OreSlider : Control
         float scale = OreMetrics.Scale(this);
         int px = Math.Max(1, (int)Math.Round(2 * scale)), thumb = ThumbSize(), half = thumb / 2;
         int x = half + (int)((Width - thumb) * (Value - Minimum) / (float)Math.Max(1, Maximum - Minimum));
-        int center = Height / 2, trackHeight = Math.Max(5, (int)Math.Round(11 * scale));
+        int center = Height / 2, trackHeight = Math.Max(3, (int)Math.Round(6 * scale));
         OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Background : Parent.BackColor);
+        // 细圆角轨道：未填充段为深槽，已填充段为主色；点击映射仍沿用 ThumbSize 的范围。
         var track = new Rectangle(half, center - trackHeight / 2, Width - thumb, trackHeight);
-        OreRenderer.Fill(e.Graphics, track, OreTheme.Line);
-        var inside = Rectangle.Inflate(track, -px, -px);
-        OreRenderer.Fill(e.Graphics, inside, OreRenderer.Highlight(OreTheme.Edge));
-        var progress = inside;
-        progress.Width = Math.Max(0, x - inside.X);
-        OreRenderer.Fill(e.Graphics, progress, Enabled ? OreRenderer.Highlight(OreTheme.Green) : OreTheme.Muted);
-        inside.Inflate(0, -px);
-        OreRenderer.Fill(e.Graphics, inside, OreTheme.Edge);
-        progress = inside;
-        progress.Width = Math.Max(0, x - inside.X);
-        OreRenderer.Fill(e.Graphics, progress, Enabled ? OreTheme.Green : OreTheme.Muted);
-        var handle = new Rectangle(x - half, (Height - thumb) / 2, thumb, thumb);
-        Color face = Enabled ? hover || dragging ? OreTheme.LightHover : OreTheme.Light : OreTheme.LightPressed;
-        OreRenderer.Raised(e.Graphics, handle, face, OreRenderer.Highlight(face, 40), OreTheme.Edge, px, false);
+        OreRenderer.FillRound(e.Graphics, track, OreTheme.Edge, trackHeight / 2);
+        // 已填充段至少一个轨道高度，左端始终是完整圆头；右端被拇指覆盖。
+        var progress = new Rectangle(track.X, track.Y, Math.Min(track.Width, Math.Max(trackHeight, x - track.X)), track.Height);
+        OreRenderer.FillRound(e.Graphics, progress, Enabled ? OreTheme.Green : OreTheme.Muted, trackHeight / 2);
+        // 圆形拇指：白色面 + 主色描边，悬停/拖动时外扩一圈柔光。
+        int knob = Math.Max(10, Math.Min(Height - px * 2, (int)Math.Round(18 * scale)));
+        var handle = new Rectangle(x - knob / 2, center - knob / 2, knob, knob);
+        if (Enabled && (hover || dragging))
+            OreRenderer.FillRound(e.Graphics, Rectangle.Inflate(handle, px * 2, px * 2), Color.FromArgb(48, OreTheme.Accent), knob);
+        Color face = Enabled ? dragging ? OreTheme.LightHover : OreTheme.Light : OreTheme.Muted;
+        OreRenderer.Plate(e.Graphics, handle, face, Enabled ? OreTheme.Green : OreTheme.Edge, knob / 2, Math.Max(1, px));
         if (Focused && ShowFocusCues)
             OreRenderer.Focus(e.Graphics, Rectangle.Inflate(handle, px * 2, px * 2), px);
     }
@@ -429,12 +433,10 @@ sealed class OreSelect : Control
     protected override void OnPaint(PaintEventArgs e)
     {
         int px = OreMetrics.Pixel(this, 2, OreMetrics.ControlHeight);
-        Color face = !Enabled ? OreTheme.LightPressed : hover ? OreTheme.Edge : OreTheme.Surface;
         OreRenderer.Fill(e.Graphics, ClientRectangle, Parent == null ? OreTheme.Card : Parent.BackColor);
-        OreRenderer.Raised(e.Graphics, ClientRectangle, face, OreRenderer.Highlight(face), OreTheme.Background, px, false);
-        if (Focused && ShowFocusCues)
-            OreRenderer.Focus(e.Graphics, ClientRectangle, px);
-        var bounds = new Rectangle(px * 8, 0, Width - px * 23, Height - px * 2);
+        // 下拉框与数字框同属输入槽：深色底、细描边，焦点时描边转主色。
+        OreRenderer.Field(e.Graphics, ClientRectangle, px, hover, Focused && ShowFocusCues || openPopup != null, Enabled);
+        var bounds = new Rectangle(px * 6, 0, Width - px * 20, Height);
         string text = index >= 0 && index < Items.Count ? Items[index].ToString() : L10n.T("选择槽位");
         var image = ItemIcon == null || index < 0 || index >= Items.Count ? null : ItemIcon(index);
         if (image != null)
@@ -451,9 +453,17 @@ sealed class OreSelect : Control
             PixelText.DrawMenu(e.Graphics, text, bounds);
         else
             PixelText.DrawCjkOrBody(e.Graphics, text, bounds, Enabled ? OreTheme.Text : OreTheme.DisabledText, OreMetrics.Scale(this), false);
-        int x = Width - px * 10, y = Height / 2;
-        using (var pen = new Pen(Enabled ? OreTheme.Text : OreTheme.Muted, px))
-            e.Graphics.DrawLines(pen, new[] { new Point(x - px * 2, y - px), new Point(x, y + px), new Point(x + px * 2, y - px) });
+        // 抗锯齿 V 形箭头，展开时翻转向上。
+        float x = Width - px * 9, y = Height / 2f, arm = px * 2.5f, rise = px * 1.25f * (openPopup != null ? -1 : 1);
+        var arrowState = e.Graphics.Save();
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using (var pen = new Pen(Enabled ? hover ? OreTheme.Text : OreTheme.Muted : OreTheme.DisabledText, Math.Max(1.5f, px * .9f)))
+        {
+            pen.StartCap = pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+            pen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+            e.Graphics.DrawLines(pen, new[] { new PointF(x - arm, y - rise), new PointF(x, y + rise), new PointF(x + arm, y - rise) });
+        }
+        e.Graphics.Restore(arrowState);
     }
 
     // 响应控件点击，切换或打开当前选项。
@@ -489,19 +499,19 @@ sealed class OreSelect : Control
         if (!Enabled || Items.Count == 0)
             return;
         ClosePopup();
-        int rowHeight = Math.Max(24, (int)Math.Round(36 * OreMetrics.Scale(this))), edge = OreMetrics.Pixel(this, 2, 44);
+        int rowHeight = Math.Max(24, (int)Math.Round(36 * OreMetrics.Scale(this))), edge = Math.Max(1, OreMetrics.Pixel(this, 1, 44));
         var popup = new Form
         {
             FormBorderStyle = FormBorderStyle.None,
             StartPosition = FormStartPosition.Manual,
             ShowInTaskbar = false,
-            BackColor = OreTheme.Line,
+            BackColor = OreTheme.Edge,
             ClientSize = new Size(Width, Math.Min(Items.Count, 4) * rowHeight + edge * 2)
         };
         var list = new OreScrollPanel
         {
             DrawingScale = OreMetrics.Scale(this),
-            BackColor = OreTheme.Field,
+            BackColor = OreTheme.Card,
             Location = new Point(edge, edge),
             Size = new Size(Width - edge * 2, popup.ClientSize.Height - edge * 2),
             BarWidth = Math.Max(12, (int)(16 * OreMetrics.Scale(this)))
@@ -547,8 +557,10 @@ sealed class OreSelect : Control
         {
             if (openPopup == popup) openPopup = null;
             popup.Dispose();
+            if (!IsDisposed) Invalidate();
         };
         popup.Show(FindForm());
+        Invalidate();
     }
     // 切换装备/语言/资源前关闭旧菜单，避免旧索引选中另一效果或绘制已释放的缓存图像。
     internal void ClosePopup()
